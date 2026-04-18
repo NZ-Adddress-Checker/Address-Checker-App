@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const beginLogin = async () => {
+  const beginLogin = async (isSignUp = false) => {
     setError("");
     try {
       setLoading(true);
@@ -24,6 +24,7 @@ export default function LoginPage() {
         clientId: cognito.clientId,
         redirectUri: cognito.redirectUri,
         scope: cognito.scope,
+        isSignUp,
       });
       window.location.assign(loginUrl);
     } catch (err) {
@@ -49,9 +50,22 @@ export default function LoginPage() {
         return;
       }
 
-      await beginLogin();
+      await beginLogin(false);
     } catch (err) {
       consumeLoginRestartPending();
+      setLoading(false);
+      setError(err instanceof Error ? err.message : AUTH_MESSAGES.startLoginFailed);
+    }
+  };
+
+  const onSignUp = async () => {
+    setError("");
+    try {
+      if (isCognitoConfigured()) {
+        clearAuthSession();
+      }
+      await beginLogin(true);
+    } catch (err) {
       setLoading(false);
       setError(err instanceof Error ? err.message : AUTH_MESSAGES.startLoginFailed);
     }
@@ -62,7 +76,7 @@ export default function LoginPage() {
       return;
     }
 
-    void beginLogin();
+    void beginLogin(false);
   }, []);
 
   return (
@@ -70,9 +84,14 @@ export default function LoginPage() {
       <section className="card login-card">
         <h1>NZ Address Checker</h1>
         {isCognitoConfigured() ? (
-          <button type="button" className="button" onClick={onLogin} disabled={loading}>
-            {loading ? "Redirecting..." : "Login"}
-          </button>
+          <>
+            <button type="button" className="button" onClick={onLogin} disabled={loading}>
+              {loading ? "Redirecting..." : "Login"}
+            </button>
+            <button type="button" className="button" onClick={onSignUp} disabled={loading}>
+              {loading ? "Redirecting..." : "Sign Up"}
+            </button>
+          </>
         ) : (
           <p className="error">
             {AUTH_MESSAGES.loginConfigMissing}
