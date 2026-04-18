@@ -5,7 +5,7 @@ import {
   clearAuthSession,
   consumeLoginRestartPending,
   markLoginRestartPending,
-} from "../auth";
+} from "../auth/index.js";
 import { AUTH_MESSAGES } from "../constants/authMessages";
 import { appConfig, isCognitoConfigured } from "../config";
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { checkAddress } from "../api";
-import { buildAppLogoutUrl, clearAuthSession } from "../auth";
+import { buildAppLogoutUrl, clearAuthSession } from "../auth/index.js";
 import { NZ_ADDRESS_SUGGESTIONS } from "../constants/addressSuggestions";
 import { AUTH_MESSAGES } from "../constants/authMessages";
 import { appConfig, isCognitoConfigured } from "../config";

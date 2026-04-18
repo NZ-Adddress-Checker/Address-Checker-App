@@ -6,7 +6,7 @@ import {
   parseAuthResult,
   setTokens,
   validatePkceState,
-} from "../auth";
+} from "../auth/index.js";
 import {
   AUTH_MESSAGES,
   getFriendlyCognitoErrorMessage,
