@@ -1,0 +1,190 @@
+:root {
+  color-scheme: light;
+  font-family: "Trebuchet MS", "Gill Sans", "Gill Sans MT", sans-serif;
+  --ink: #0b1f2e;
+  --accent: #f97316;
+  --harbor-blue: #0a5e94;
+  --foam: #c7f0ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  background:
+    linear-gradient(180deg, rgba(1, 33, 105, 0.3) 0%, rgba(1, 33, 105, 0.6) 100%),
+    url("/nz-flag-bg.svg") center center / cover no-repeat fixed;
+  background-attachment: fixed;
+  color: var(--ink);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 420px at 50% -5%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 70%),
+    repeating-linear-gradient(120deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 11px);
+  opacity: 0.55;
+}
+
+.screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.card {
+  width: min(640px, 100%);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 22px 45px rgba(8, 27, 44, 0.24);
+  backdrop-filter: blur(4px);
+}
+
+.login-screen {
+  padding: 2rem 1rem;
+}
+
+.login-card {
+  text-align: center;
+}
+
+.login-card h1 {
+  margin: 0.25rem 0 1rem;
+  color: #08263c;
+  letter-spacing: 0.02em;
+}
+
+.login-card p {
+  margin: 0 0 0.85rem;
+}
+
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.form {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.autocomplete {
+  position: relative;
+}
+
+.suggestions {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  border-radius: 10px;
+  border: 1px solid #cdd9ea;
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.15);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.suggestion-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 0.6rem 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #0f172a;
+}
+
+.suggestion-item:hover {
+  background: #eef6ff;
+}
+
+.button {
+  display: inline-block;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f97316 0%, #fb7185 100%);
+  color: #fff;
+  padding: 0.72rem 1.14rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.login-card .button {
+  background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%);
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 16px rgba(167, 47, 49, 0.24);
+}
+
+.button.secondary {
+  background: #334155;
+}
+
+.button:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #b91c1c;
+  margin-top: 1rem;
+}
+
+.reset-login-button {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  border: none;
+  border-radius: 999px;
+  background: #b91c1c;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+  box-shadow: 0 6px 12px rgba(127, 29, 29, 0.35);
+  z-index: 20;
+}
+
+.reset-login-button:hover {
+  background: #991b1b;
+}
+
+.result {
+  margin-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.75rem;
+}

@@ -1,33 +1,23 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import AddressChecker from './components/AddressChecker';
-import Login from './components/Login';
-import ProtectedRoute from './components/ProtectedRoute';
-import { AuthProvider } from './context/AuthContext';
-import GlobalStyle from './styles/GlobalStyles';
+import { Navigate, Route, Routes } from "react-router-dom";
+import CallbackPage from "./components/CallbackPage";
+import AddressPage from "./components/AddressPage";
+import LoginPage from "./components/LoginPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-function App() {
+export default function App() {
   return (
-    <>
-      <GlobalStyle />
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/address-checker"
-              element={
-                <ProtectedRoute>
-                  <AddressChecker />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/" element={<Navigate to="/address-checker" replace />} />
-            <Route path="*" element={<Navigate to="/address-checker" replace />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </>
+    <Routes>
+      <Route path="/" element={<LoginPage />} />
+      <Route path="/callback" element={<CallbackPage />} />
+      <Route
+        path="/address"
+        element={
+          <ProtectedRoute>
+            <AddressPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
-
-export default App;

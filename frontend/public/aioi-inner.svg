@@ -1,0 +1,54 @@
+<svg width="1200" height="520" viewBox="0 0 1200 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aioi inspired city and bay illustration">
+  <defs>
+    <linearGradient id="sky" x1="600" y1="0" x2="600" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FCECC7"/>
+      <stop offset="0.4" stop-color="#F8B3A0"/>
+      <stop offset="1" stop-color="#3A79AB"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(640 170) rotate(90) scale(120)">
+      <stop stop-color="#FFE7A2"/>
+      <stop offset="1" stop-color="#FFE7A2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="water" x1="600" y1="340" x2="600" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2A72A4" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#0A426A" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="building" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#163A59"/>
+      <stop offset="1" stop-color="#0A2336"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="520" fill="url(#sky)"/>
+  <circle cx="640" cy="170" r="120" fill="url(#sun)"/>
+
+  <g opacity="0.95">
+    <rect x="80" y="250" width="70" height="120" fill="url(#building)"/>
+    <rect x="160" y="220" width="55" height="150" fill="url(#building)"/>
+    <rect x="225" y="260" width="68" height="110" fill="url(#building)"/>
+    <rect x="315" y="205" width="78" height="165" fill="url(#building)"/>
+    <rect x="405" y="240" width="60" height="130" fill="url(#building)"/>
+
+    <rect x="740" y="235" width="62" height="135" fill="url(#building)"/>
+    <rect x="815" y="200" width="80" height="170" fill="url(#building)"/>
+    <rect x="910" y="245" width="58" height="125" fill="url(#building)"/>
+    <rect x="985" y="218" width="74" height="152" fill="url(#building)"/>
+    <rect x="1070" y="255" width="62" height="115" fill="url(#building)"/>
+  </g>
+
+  <g transform="translate(595 0)">
+    <rect x="-8" y="155" width="16" height="215" rx="5" fill="#D8EFFF"/>
+    <rect x="-1.5" y="80" width="3" height="75" rx="1.5" fill="#E9F6FF"/>
+    <rect x="-54" y="205" width="108" height="18" rx="9" fill="#C7E4FA"/>
+    <rect x="-48" y="213" width="96" height="6" rx="3" fill="#8FB8D8"/>
+  </g>
+
+  <rect x="0" y="340" width="1200" height="180" fill="url(#water)"/>
+
+  <g opacity="0.62" stroke="#CDEEFF" stroke-width="2">
+    <path d="M95 390C160 382 235 382 310 390"/>
+    <path d="M380 430C460 420 540 420 620 430"/>
+    <path d="M700 398C785 388 865 388 955 398"/>
+    <path d="M860 455C935 445 1030 445 1110 455"/>
+  </g>
+</svg>
