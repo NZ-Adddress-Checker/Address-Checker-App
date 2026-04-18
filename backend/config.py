@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     app_name: str = "NZ Address Checker API"
     app_env: str = "dev"
-    frontend_origin: str = "http://localhost:3000"
+    frontend_origin: str = "http://localhost:5173"
     frontend_origins: str = ""
 
     jwt_issuer: str = ""

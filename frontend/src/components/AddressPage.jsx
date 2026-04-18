@@ -67,6 +67,9 @@ export default function AddressPage() {
       setLoading(true);
       const data = await checkAddress(address.trim());
       setResult(data);
+      if (!data.is_valid) {
+        setError(AUTH_MESSAGES.addressNotInSuggestions);
+      }
       setShowSuggestions(false);
     } catch (err) {
       setError(normalizeError(err));

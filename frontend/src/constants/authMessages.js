@@ -9,6 +9,7 @@ export const AUTH_MESSAGES = {
   invalidSession: "Your session is invalid or expired. Please log in again.",
   requestTimedOut: "The validation request timed out. Try again.",
   addressValidationFailed: "Address validation failed. Please try again.",
+  addressNotInSuggestions: "Please select an address from the dropdown list.",
   emptyAddress: "Please enter an address.",
   invalidChallengeTransition:
     "Cognito user state is out of sync (invalid challenge transition). In AWS Cognito, set the user to CONFIRMED with a permanent password, then sign out of Cognito and try login again.",
