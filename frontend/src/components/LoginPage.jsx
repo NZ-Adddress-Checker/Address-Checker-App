@@ -1,5 +1,12 @@
-import { useState } from "react";
-import { buildCognitoLogoutUrl, buildPkceAuthorizeUrl, resetLoginSession } from "../auth";
+import { useEffect, useState } from "react";
+import {
+  buildAppLogoutUrl,
+  buildPkceAuthorizeUrl,
+  clearAuthSession,
+  consumeLoginRestartPending,
+  markLoginRestartPending,
+} from "../auth";
+import { AUTH_MESSAGES } from "../constants/authMessages";
 import { appConfig, isCognitoConfigured } from "../config";
 
 const { cognito } = appConfig;
@@ -7,9 +14,8 @@ const { cognito } = appConfig;
 export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sessionReset, setSessionReset] = useState(false);
 
-  const onLogin = async () => {
+  const beginLogin = async () => {
     setError("");
     try {
       setLoading(true);
@@ -22,31 +28,42 @@ export default function LoginPage() {
       window.location.assign(loginUrl);
     } catch (err) {
       setLoading(false);
-      setError(err instanceof Error ? err.message : "Unable to start Cognito login");
+      setError(err instanceof Error ? err.message : AUTH_MESSAGES.startLoginFailed);
     }
   };
 
-  const onResetSession = () => {
-    resetLoginSession();
+  const onLogin = async () => {
     setError("");
-    setSessionReset(true);
 
-    if (isCognitoConfigured()) {
-      try {
-        const redirectUrl = new URL(cognito.redirectUri);
-        const logoutUri = `${redirectUrl.origin}/`;
-        const logoutUrl = buildCognitoLogoutUrl({
-          domain: cognito.domain,
-          clientId: cognito.clientId,
-          logoutUri,
-        });
-        window.location.assign(logoutUrl);
+    try {
+      if (isCognitoConfigured()) {
+        clearAuthSession();
+        markLoginRestartPending();
+        window.location.assign(
+          buildAppLogoutUrl({
+            domain: cognito.domain,
+            clientId: cognito.clientId,
+            redirectUri: cognito.redirectUri,
+          })
+        );
         return;
-      } catch {
-        // Ignore malformed logout configuration and keep local reset behavior.
       }
+
+      await beginLogin();
+    } catch (err) {
+      consumeLoginRestartPending();
+      setLoading(false);
+      setError(err instanceof Error ? err.message : AUTH_MESSAGES.startLoginFailed);
     }
   };
+
+  useEffect(() => {
+    if (!consumeLoginRestartPending()) {
+      return;
+    }
+
+    void beginLogin();
+  }, []);
 
   return (
     <main className="screen login-screen">
@@ -58,16 +75,11 @@ export default function LoginPage() {
           </button>
         ) : (
           <p className="error">
-            Cognito is not configured. Set VITE_COGNITO_DOMAIN, VITE_COGNITO_CLIENT_ID,
-            VITE_COGNITO_REDIRECT_URI, and VITE_COGNITO_SCOPE in frontend/.env.
+            {AUTH_MESSAGES.loginConfigMissing}
           </p>
         )}
         {error && <p className="error">{error}</p>}
-        {sessionReset && <p>Login session reset. If prompted, sign in again.</p>}
       </section>
-      <button type="button" className="reset-login-button" onClick={onResetSession}>
-        Reset login session
-      </button>
     </main>
   );
 }

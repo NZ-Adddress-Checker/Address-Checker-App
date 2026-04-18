@@ -162,27 +162,6 @@ input {
   margin-top: 1rem;
 }
 
-.reset-login-button {
-  position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  border: none;
-  border-radius: 999px;
-  background: #b91c1c;
-  color: #ffffff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1;
-  padding: 0.5rem 0.7rem;
-  cursor: pointer;
-  box-shadow: 0 6px 12px rgba(127, 29, 29, 0.35);
-  z-index: 20;
-}
-
-.reset-login-button:hover {
-  background: #991b1b;
-}
-
 .result {
   margin-top: 1rem;
   border-top: 1px solid #e2e8f0;

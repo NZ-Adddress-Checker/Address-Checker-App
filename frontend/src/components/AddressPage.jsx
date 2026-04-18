@@ -1,43 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { checkAddress } from "../api";
-import { buildCognitoLogoutUrl, clearPkceState, clearToken } from "../auth";
+import { buildAppLogoutUrl, clearAuthSession } from "../auth";
+import { NZ_ADDRESS_SUGGESTIONS } from "../constants/addressSuggestions";
+import { AUTH_MESSAGES } from "../constants/authMessages";
 import { appConfig, isCognitoConfigured } from "../config";
-
-const NZ_ADDRESS_SUGGESTIONS = [
-  "10 Queen Street, Auckland 1010",
-  "120 Queen Street, Auckland 1010",
-  "1 Viaduct Harbour Avenue, Auckland 1010",
-  "34 Customs Street West, Auckland 1010",
-  "167 Victoria Street West, Auckland 1010",
-  "2 Quay Street, Auckland 1010",
-  "1 Queen Street, Auckland 1010",
-  "100 Lambton Quay, Wellington 6011",
-  "25 Cuba Street, Wellington 6011",
-  "15 Courtenay Place, Wellington 6011",
-  "150 Willis Street, Wellington 6011",
-  "1 Cathedral Square, Christchurch 8011",
-  "120 Hereford Street, Christchurch 8011",
-  "200 Colombo Street, Christchurch 8011",
-  "8 The Octagon, Dunedin 9016",
-  "70 George Street, Dunedin 9016",
-  "45 Cameron Road, Tauranga 3110",
-  "67 Victoria Street, Hamilton 3204",
-  "3 Marine Parade, Napier 4110",
-  "20 Trafalgar Street, Nelson 7010",
-];
 
 function normalizeError(error) {
   if (error.response?.status === 401) {
-    return "Your session is invalid or expired. Please log in again.";
+    return AUTH_MESSAGES.invalidSession;
   }
   if (error.code === "ECONNABORTED") {
-    return "The validation request timed out. Try again.";
+    return AUTH_MESSAGES.requestTimedOut;
   }
   if (error.response?.data?.detail) {
     return error.response.data.detail;
   }
-  return "Address validation failed. Please try again.";
+  return AUTH_MESSAGES.addressValidationFailed;
 }
 
 export default function AddressPage() {
@@ -55,17 +34,14 @@ export default function AddressPage() {
       : NZ_ADDRESS_SUGGESTIONS.filter((item) => item.toLowerCase().includes(trimmedInput)).slice(0, 6);
 
   const onLogout = () => {
-    clearPkceState();
-    clearToken();
+    clearAuthSession();
 
     if (isCognitoConfigured()) {
       try {
-        const redirectUrl = new URL(appConfig.cognito.redirectUri);
-        const logoutUri = `${redirectUrl.origin}/`;
-        const logoutUrl = buildCognitoLogoutUrl({
+        const logoutUrl = buildAppLogoutUrl({
           domain: appConfig.cognito.domain,
           clientId: appConfig.cognito.clientId,
-          logoutUri,
+          redirectUri: appConfig.cognito.redirectUri,
         });
         window.location.assign(logoutUrl);
         return;
@@ -83,7 +59,7 @@ export default function AddressPage() {
     setResult(null);
 
     if (!address.trim()) {
-      setError("Please enter an address.");
+      setError(AUTH_MESSAGES.emptyAddress);
       return;
     }
 
