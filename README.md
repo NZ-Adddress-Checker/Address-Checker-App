@@ -2,73 +2,85 @@
 
 ## Overview
 
-This project contains:
-- `backend/`: FastAPI API with JWT-protected `/address-check`
-- `frontend/`: React app with Cognito Hosted UI login and protected address page
-- `docker/Dockerfile`: container image for backend deployment
-- `.github/workflows/ci.yml`: CI pipeline for backend tests and frontend build
+This repository contains:
+- backend: FastAPI API with JWT-protected address endpoints.
+- frontend: React application with Cognito Hosted UI and PKCE login flow.
+- docker: Backend and frontend container definitions, nginx config, and compose stack.
 
-## Local Setup
+Current architecture uses these API endpoints:
+- GET /health
+- GET /address-suggestions (JWT required)
+- POST /address-check (JWT required)
 
-### Backend
+## Prerequisites
 
-1. Copy `backend/.env.example` to `backend/.env` and update values.
-2. Install packages:
-   - `cd backend`
-   - `pip install -r requirements.txt`
+- Python 3.12+
+- Node.js 20+
+- Docker Desktop (optional for container workflow)
+
+## Local Development
+
+### 1. Backend setup
+
+1. Copy backend/.env.example to backend/.env and fill real Cognito/NZ Post values as needed.
+2. Install dependencies:
+   - cd backend
+   - pip install -r requirements.txt
 3. Run API:
-   - `uvicorn main:app --reload --port 8000`
+   - uvicorn main:app --reload --port 8000
 4. Health check:
-   - `GET http://localhost:8000/health`
+   - http://localhost:8000/health
 
-### Frontend
+### 2. Frontend setup
 
-1. Copy `frontend/.env.example` to `frontend/.env` and update Cognito/API values.
-2. Install packages:
-   - `cd frontend`
-   - `npm install`
-3. Run app:
-   - `npm run dev`
-4. Open `http://localhost:3000`
+1. Copy frontend/.env.example to frontend/.env and update values.
+2. Install dependencies:
+   - cd frontend
+   - npm install
+3. Start Vite:
+   - npm run dev
+4. Open:
+   - http://localhost:5173
 
-## Backend API
+## Docker Workflow
 
-### `POST /address-check`
+All Docker-related files are under the docker folder.
 
-Headers:
-- `Authorization: Bearer <JWT>`
+### Run full stack (backend + frontend)
 
-Body:
-```json
+From repository root:
+- docker compose -f docker/docker-compose.yml up -d --build
+
+Service URLs:
+- Backend API: http://localhost:8000
+- Frontend app: http://localhost:8080
+- Frontend health: http://localhost:8080/health
+
+### Stop stack
+
+- docker compose -f docker/docker-compose.yml down
+
+### Optional compose environment overrides
+
+If you want to override frontend build-time variables, copy docker/.env.example to docker/.env and export those values in your shell before running compose.
+
+## API Contract (address-check)
+
+Request body:
 {
   "address": "10 Queen Street, Auckland"
 }
-```
 
-Success response:
-```json
+Response shape:
 {
   "is_valid": true,
-  "normalized_address": "10 Queen Street, Auckland",
+  "normalized_address": "10 Queen Street, Auckland 1010",
   "source": "mock"
 }
-```
 
-Error codes:
-- `400`: invalid input
-- `401`: unauthorized or invalid token
-- `502`: NZ Post API failure
-- `504`: NZ Post timeout
-
-## Testing
-
-Run backend tests:
-- `cd backend`
-- `pytest -q`
-
-## Deployment Notes
-
-- Build image from repository root:
-  - `docker build -f docker/Dockerfile -t nz-address-checker-api .`
-- Push to ECR and deploy in ECS/Fargate.
-- Configure ALB or API Gateway to route traffic to backend service.
+Common error codes:
+- 400 invalid input
+- 401 missing/invalid/expired token
+- 503 temporary JWKS validation outage
+- 502 upstream NZ Post error
+- 504 upstream timeout
