@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const beginLogin = async (isSignUp = false) => {
+  const beginLogin = async () => {
     setError("");
     try {
       setLoading(true);
@@ -24,7 +24,6 @@ export default function LoginPage() {
         clientId: cognito.clientId,
         redirectUri: cognito.redirectUri,
         scope: cognito.scope,
-        isSignUp,
       });
       window.location.assign(loginUrl);
     } catch (err) {
@@ -50,7 +49,7 @@ export default function LoginPage() {
         return;
       }
 
-      await beginLogin(false);
+      await beginLogin();
     } catch (err) {
       consumeLoginRestartPending();
       setLoading(false);
@@ -63,7 +62,7 @@ export default function LoginPage() {
       return;
     }
 
-    void beginLogin(false);
+    void beginLogin();
   }, []);
 
   return (

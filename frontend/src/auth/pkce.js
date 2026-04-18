@@ -20,7 +20,7 @@ async function sha256Base64Url(input) {
   return toBase64Url(new Uint8Array(digest));
 }
 
-export async function buildPkceAuthorizeUrl({ domain, clientId, redirectUri, scope, isSignUp = false }) {
+export async function buildPkceAuthorizeUrl({ domain, clientId, redirectUri, scope }) {
   if (!domain || !clientId || !redirectUri || !scope) {
     throw new Error("Missing Cognito configuration values");
   }
@@ -41,7 +41,7 @@ export async function buildPkceAuthorizeUrl({ domain, clientId, redirectUri, sco
   url.searchParams.set("code_challenge", codeChallenge);
   url.searchParams.set("code_challenge_method", "S256");
   url.searchParams.set("state", state);
-  url.searchParams.set("prompt", isSignUp ? "signup" : "login");
+  url.searchParams.set("prompt", "login");
 
   return url.toString();
 }
