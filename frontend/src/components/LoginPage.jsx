@@ -58,19 +58,6 @@ export default function LoginPage() {
     }
   };
 
-  const onSignUp = async () => {
-    setError("");
-    try {
-      if (isCognitoConfigured()) {
-        clearAuthSession();
-      }
-      await beginLogin(true);
-    } catch (err) {
-      setLoading(false);
-      setError(err instanceof Error ? err.message : AUTH_MESSAGES.startLoginFailed);
-    }
-  };
-
   useEffect(() => {
     if (!consumeLoginRestartPending()) {
       return;
@@ -84,14 +71,9 @@ export default function LoginPage() {
       <section className="card login-card">
         <h1>NZ Address Checker</h1>
         {isCognitoConfigured() ? (
-          <>
-            <button type="button" className="button" onClick={onLogin} disabled={loading}>
-              {loading ? "Redirecting..." : "Login"}
-            </button>
-            <button type="button" className="button" onClick={onSignUp} disabled={loading}>
-              {loading ? "Redirecting..." : "Sign Up"}
-            </button>
-          </>
+          <button type="button" className="button" onClick={onLogin} disabled={loading}>
+            {loading ? "Redirecting..." : "Login"}
+          </button>
         ) : (
           <p className="error">
             {AUTH_MESSAGES.loginConfigMissing}

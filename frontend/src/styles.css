@@ -148,10 +148,6 @@ input {
   color: #012169;
 }
 
-.login-card > button + button {
-  margin-left: 0.75rem;
-}
-
 .button:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 16px rgba(167, 47, 49, 0.24);
