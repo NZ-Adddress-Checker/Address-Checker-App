@@ -19,3 +19,9 @@ export async function checkAddress(address) {
   const response = await api.post("/address-check", { address });
   return response.data;
 }
+
+export async function getAddressSuggestions() {
+  const response = await api.get("/address-suggestions");
+  const items = response.data?.items;
+  return Array.isArray(items) ? items : [];
+}

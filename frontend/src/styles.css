@@ -61,7 +61,7 @@ body::before {
 
 .login-card h1 {
   margin: 0.25rem 0 1rem;
-  color: #08263c;
+  color: #012169;
   letter-spacing: 0.02em;
 }
 
@@ -74,6 +74,10 @@ body::before {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.card h1 {
+  color: #012169;
 }
 
 .form {
@@ -141,6 +145,7 @@ input {
 
 .login-card .button {
   background: linear-gradient(135deg, #b91c1c 0%, #ef4444 100%);
+  color: #012169;
 }
 
 .button:hover {

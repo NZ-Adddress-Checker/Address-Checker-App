@@ -9,3 +9,7 @@ class AddressCheckResponse(BaseModel):
     is_valid: bool
     normalized_address: str | None = None
     source: str
+
+
+class AddressSuggestionsResponse(BaseModel):
+    items: list[str]

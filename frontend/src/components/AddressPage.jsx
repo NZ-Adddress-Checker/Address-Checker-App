@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { checkAddress } from "../api";
+import { checkAddress, getAddressSuggestions } from "../api";
 import { buildAppLogoutUrl, clearAuthSession } from "../auth/index.js";
 import { NZ_ADDRESS_SUGGESTIONS } from "../constants/addressSuggestions";
 import { AUTH_MESSAGES } from "../constants/authMessages";
@@ -23,6 +23,7 @@ export default function AddressPage() {
   const navigate = useNavigate();
   const [address, setAddress] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState(NZ_ADDRESS_SUGGESTIONS);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,7 +32,27 @@ export default function AddressPage() {
   const suggestions =
     trimmedInput.length < 2
       ? []
-      : NZ_ADDRESS_SUGGESTIONS.filter((item) => item.toLowerCase().includes(trimmedInput)).slice(0, 6);
+      : addressSuggestions.filter((item) => item.toLowerCase().includes(trimmedInput)).slice(0, 6);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSuggestions = async () => {
+      try {
+        const items = await getAddressSuggestions();
+        if (isMounted && items.length > 0) {
+          setAddressSuggestions(items);
+        }
+      } catch {
+        // Keep local fallback suggestions if endpoint is unavailable.
+      }
+    };
+
+    void loadSuggestions();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const onLogout = () => {
     clearAuthSession();
@@ -139,9 +160,6 @@ export default function AddressPage() {
           <div className="result">
             <p>
               <strong>Valid:</strong> {result.is_valid ? "Yes" : "No"}
-            </p>
-            <p>
-              <strong>Normalized:</strong> {result.normalized_address || "N/A"}
             </p>
             <p>
               <strong>Source:</strong> {result.source}

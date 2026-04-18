@@ -2,29 +2,29 @@ import httpx
 
 from config import settings
 
-# Valid addresses - only these from the dropdown will be accepted
-VALID_ADDRESSES = {
-    "10 queen street, auckland 1010",
-    "120 queen street, auckland 1010",
-    "1 viaduct harbour avenue, auckland 1010",
-    "34 customs street west, auckland 1010",
-    "167 victoria street west, auckland 1010",
-    "2 quay street, auckland 1010",
-    "1 queen street, auckland 1010",
-    "100 lambton quay, wellington 6011",
-    "25 cuba street, wellington 6011",
-    "15 courtenay place, wellington 6011",
-    "150 willis street, wellington 6011",
-    "1 cathedral square, christchurch 8011",
-    "120 hereford street, christchurch 8011",
-    "200 colombo street, christchurch 8011",
-    "8 the octagon, dunedin 9016",
-    "70 george street, dunedin 9016",
-    "45 cameron road, tauranga 3110",
-    "67 victoria street, hamilton 3204",
-    "3 marine parade, napier 4110",
-    "20 trafalgar street, nelson 7010",
-}
+# Reusable canonical suggestions for mock mode.
+MOCK_ADDRESS_SUGGESTIONS: tuple[str, ...] = (
+    "10 Queen Street, Auckland 1010",
+    "120 Queen Street, Auckland 1010",
+    "1 Viaduct Harbour Avenue, Auckland 1010",
+    "34 Customs Street West, Auckland 1010",
+    "167 Victoria Street West, Auckland 1010",
+    "2 Quay Street, Auckland 1010",
+    "1 Queen Street, Auckland 1010",
+    "100 Lambton Quay, Wellington 6011",
+    "25 Cuba Street, Wellington 6011",
+    "15 Courtenay Place, Wellington 6011",
+    "150 Willis Street, Wellington 6011",
+    "1 Cathedral Square, Christchurch 8011",
+    "120 Hereford Street, Christchurch 8011",
+    "200 Colombo Street, Christchurch 8011",
+    "8 The Octagon, Dunedin 9016",
+    "70 George Street, Dunedin 9016",
+    "45 Cameron Road, Tauranga 3110",
+    "67 Victoria Street, Hamilton 3204",
+    "3 Marine Parade, Napier 4110",
+    "20 Trafalgar Street, Nelson 7010",
+)
 
 
 def _normalize_address_key(address: str) -> str:
@@ -33,6 +33,15 @@ def _normalize_address_key(address: str) -> str:
 
 def _normalize_address_display(address: str) -> str:
     return " ".join(address.split()).title()
+
+
+MOCK_ADDRESS_KEYS = frozenset(_normalize_address_key(address) for address in MOCK_ADDRESS_SUGGESTIONS)
+
+
+def get_address_suggestions() -> list[str]:
+    if settings.nzpost_mock:
+        return list(MOCK_ADDRESS_SUGGESTIONS)
+    return []
 
 
 class NZPostServiceError(Exception):
@@ -46,7 +55,7 @@ class NZPostServiceTimeout(Exception):
 async def validate_address(address: str) -> dict:
     if settings.nzpost_mock:
         normalized_key = _normalize_address_key(address)
-        is_valid = normalized_key in VALID_ADDRESSES
+        is_valid = normalized_key in MOCK_ADDRESS_KEYS
 
         return {
             "is_valid": is_valid,

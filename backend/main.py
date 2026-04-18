@@ -3,8 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from auth import require_jwt
 from config import settings
-from schemas import AddressCheckRequest, AddressCheckResponse
-from services.nzpost import NZPostServiceError, NZPostServiceTimeout, validate_address
+from schemas import AddressCheckRequest, AddressCheckResponse, AddressSuggestionsResponse
+from services.nzpost import (
+    NZPostServiceError,
+    NZPostServiceTimeout,
+    get_address_suggestions,
+    validate_address,
+)
 
 app = FastAPI(title=settings.app_name)
 
@@ -20,6 +25,11 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "env": settings.app_env}
+
+
+@app.get("/address-suggestions", response_model=AddressSuggestionsResponse)
+def address_suggestions(_claims: dict = Depends(require_jwt)) -> AddressSuggestionsResponse:
+    return AddressSuggestionsResponse(items=get_address_suggestions())
 
 
 @app.post("/address-check", response_model=AddressCheckResponse)
