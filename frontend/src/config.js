@@ -1,11 +1,8 @@
 function normalizeBaseUrl(value, fallback) {
-  if (!value) {
-    return fallback;
-  }
-
+  if (!value) return fallback;
   try {
-    const parsed = new URL(value);
-    return parsed.origin;
+    // Strip trailing slash but preserve any path prefix (e.g. /v1).
+    return value.replace(/\/+$/, "");
   } catch {
     return fallback;
   }

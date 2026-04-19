@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   buildAppLogoutUrl,
   buildPkceAuthorizeUrl,
@@ -15,7 +15,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const beginLogin = async () => {
+  const beginLogin = useCallback(async () => {
     setError("");
     try {
       setLoading(true);
@@ -30,11 +30,10 @@ export default function LoginPage() {
       setLoading(false);
       setError(err instanceof Error ? err.message : AUTH_MESSAGES.startLoginFailed);
     }
-  };
+  }, []);
 
   const onLogin = async () => {
     setError("");
-
     try {
       if (isCognitoConfigured()) {
         clearAuthSession();
@@ -48,7 +47,6 @@ export default function LoginPage() {
         );
         return;
       }
-
       await beginLogin();
     } catch (err) {
       consumeLoginRestartPending();
@@ -58,12 +56,9 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    if (!consumeLoginRestartPending()) {
-      return;
-    }
-
+    if (!consumeLoginRestartPending()) return;
     void beginLogin();
-  }, []);
+  }, [beginLogin]);
 
   return (
     <main className="screen login-screen">
@@ -74,9 +69,7 @@ export default function LoginPage() {
             {loading ? "Redirecting..." : "Login"}
           </button>
         ) : (
-          <p className="error">
-            {AUTH_MESSAGES.loginConfigMissing}
-          </p>
+          <p className="error">{AUTH_MESSAGES.loginConfigMissing}</p>
         )}
         {error && <p className="error">{error}</p>}
       </section>

@@ -1,8 +1,10 @@
-name: Docker Build and Push
+name: Docker Build Test
 
+# Validates that both Docker images build and start correctly.
+# Does NOT push — that is handled by deploy.yml on the practice branch.
 on:
-  push:
-    branches: [ practice ]
+  pull_request:
+    branches: [practice]
     paths:
       - 'backend/**'
       - 'frontend/**'
@@ -14,80 +16,63 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
-  build-and-push:
+  build-test:
+    name: Build & smoke-test images
     runs-on: ubuntu-latest
-    env:
-      BACKEND_IMAGE: nz-adddress-checker/address-checker-app-backend
-      FRONTEND_IMAGE: nz-adddress-checker/address-checker-app-frontend
-    
-    permissions:
-      contents: read
-      packages: write
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Build backend image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: docker/Dockerfile
-        tags: |
-          ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-          ${{ env.BACKEND_IMAGE }}:latest
-        push: false
-        outputs: type=docker,dest=/tmp/backend-image.tar
-    
-    - name: Load backend image
-      run: |
-        docker load --input /tmp/backend-image.tar
-    
-    - name: Test backend image
-      run: |
-        docker run --rm ${{ env.BACKEND_IMAGE }}:${{ github.sha }} python -c "from main import app; print('Backend container OK')"
-      continue-on-error: true
-    
-    - name: Build frontend image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: docker/frontend.Dockerfile
-        tags: |
-          ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-          ${{ env.FRONTEND_IMAGE }}:latest
-        push: false
-        outputs: type=docker,dest=/tmp/frontend-image.tar
-    
-    - name: Load frontend image
-      run: |
-        docker load --input /tmp/frontend-image.tar
-    
-    - name: Test frontend image
-      run: |
-        docker run --rm ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} nginx -t
-      continue-on-error: true
-    
-    - name: Image metadata
-      run: |
-        echo "Backend image: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
-        echo "Frontend image: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}"
-        docker images | grep "address-checker-app"
-    
-    - name: Scan with Trivy (Backend)
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-        format: sarif
-        output: backend-trivy-results.sarif
-      continue-on-error: true
-    
-    - name: Upload Trivy results (Backend)
-      uses: actions/upload-artifact@v4
-      with:
-        name: docker-trivy-backend-sarif
-        path: backend-trivy-results.sarif
-      if: always()
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: false
+          tags: address-checker-backend:ci
+          outputs: type=docker,dest=/tmp/backend.tar
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-test backend image
+        run: |
+          docker load --input /tmp/backend.tar
+          docker run --rm address-checker-backend:ci \
+            python -c "from main import app; print('Backend OK')"
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend.Dockerfile
+          push: false
+          tags: address-checker-frontend:ci
+          outputs: type=docker,dest=/tmp/frontend.tar
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke-test frontend image
+        run: |
+          docker load --input /tmp/frontend.tar
+          docker run --rm address-checker-frontend:ci nginx -t
+
+      - name: Scan backend with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: address-checker-backend:ci
+          format: sarif
+          output: trivy-backend.sarif
+        continue-on-error: true
+
+      - name: Upload Trivy results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-backend-sarif
+          path: trivy-backend.sarif
+        if: always()
+
 
