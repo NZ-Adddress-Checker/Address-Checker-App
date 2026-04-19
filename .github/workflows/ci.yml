@@ -1,0 +1,45 @@
+name: Code Quality and Testing
+
+on:
+  push:
+    branches: [ Practice ]
+  pull_request:
+    branches: [ Practice ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-checks:
+    name: Backend Lint & Type Check
+    uses: ./.github/workflows/backend.yml
+    secrets: inherit
+  
+  frontend-checks:
+    name: Frontend Lint & Build
+    uses: ./.github/workflows/frontend.yml
+    secrets: inherit
+  
+  integration-tests:
+    name: Integration Tests
+    uses: ./.github/workflows/integration-test.yml
+    secrets: inherit
+  
+  summary:
+    name: CI Pipeline Summary
+    runs-on: ubuntu-latest
+    needs: [backend-checks, frontend-checks, integration-tests]
+    if: always()
+    
+    steps:
+    - name: Check workflow status
+      run: |
+        if [ "${{ needs.backend-checks.result }}" == "failure" ] || \
+           [ "${{ needs.frontend-checks.result }}" == "failure" ] || \
+           [ "${{ needs.integration-tests.result }}" == "failure" ]; then
+          echo "❌ CI Pipeline Failed"
+          exit 1
+        else
+          echo "✅ CI Pipeline Passed"
+        fi
