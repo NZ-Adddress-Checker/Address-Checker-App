@@ -132,14 +132,30 @@ def authenticated_page(page):
         except (AssertionError, TimeoutError) as e:
             last_error = str(e)
             logger.warning(f"Login attempt {attempt + 1} failed: {last_error}")
+            
+            # Take screenshot for debugging
+            screenshot_path = SCREENSHOT_DIR / f"login_failed_attempt_{attempt + 1}.png"
+            try:
+                page.screenshot(path=str(screenshot_path))
+                logger.info(f"Screenshot saved: {screenshot_path}")
+                # Also log the current URL and page title for debugging
+                logger.info(f"Current URL: {page.url}")
+                logger.info(f"Page title: {page.title()}")
+            except Exception as screenshot_error:
+                logger.warning(f"Failed to save screenshot: {screenshot_error}")
+            
             if attempt < RETRY_ATTEMPTS - 1:
-                page.goto(BASE_URL)
-                page.wait_for_timeout(1000)  # Wait before retry
+                page.goto(BASE_URL, wait_until="domcontentloaded")
+                page.wait_for_timeout(2000)  # Wait longer before retry
             continue
     
     if not login_success:
-        screenshot_path = SCREENSHOT_DIR / f"login_failed_{page.context.browser.contexts.index(page.context)}.png"
-        page.screenshot(path=str(screenshot_path))
+        screenshot_path = SCREENSHOT_DIR / "login_failed_final.png"
+        try:
+            page.screenshot(path=str(screenshot_path))
+            logger.info(f"Final screenshot saved: {screenshot_path}")
+        except Exception as e:
+            logger.warning(f"Failed to save final screenshot: {e}")
         raise AssertionError(f"Login failed after {RETRY_ATTEMPTS} attempts: {last_error}")
     
     yield page

@@ -12,33 +12,36 @@ class LoginPage(BasePage):
     Handles different UI variations and provides comprehensive assertions
     """
     
-    # Multiple selector strategies for robustness
+    # Multiple selector strategies for Cognito hosted UI
+    # Cognito uses specific input names and class structures
     EMAIL_SELECTORS = [
-        'input[name="email"]',
+        'input[name="username"]',  # Cognito uses "username" field
+        'input[id*="username"]',
         'input[id*="email"]',
-        'input[placeholder*="email" i]',
         'input[type="email"]',
     ]
     
     PASSWORD_SELECTORS = [
         'input[name="password"]',
         'input[id*="password"]',
-        'input[placeholder*="password" i]',
         'input[type="password"]',
+        'input[placeholder*="password" i]',
     ]
     
     SIGN_IN_SELECTORS = [
+        'button[name="signInButton"]',  # Cognito sign in button
+        'button:has-text("Sign in")',
         'button:has-text("Sign In")',
-        'button:has-text("Login")',
-        'button:has-text("login")',
         'button[type="submit"]',
+        'button:visible',
     ]
     
     ERROR_MESSAGE_SELECTORS = [
-        '.error',
         '[class*="error"]',
+        '[class*="Error"]',
         '[role="alert"]',
-        '[class*="alert"]',
+        '.errors',
+        '[data-testid="error"]',
     ]
     
     def __init__(self, page: Page):
@@ -46,12 +49,16 @@ class LoginPage(BasePage):
         self.base_url = "http://localhost:8080"
     
     def navigate(self):
-        """Navigate to login page"""
+        """Navigate to login page - wait for Cognito redirect"""
         logger.info("Navigating to login page")
-        super().navigate("/")
+        # Navigate to the app which will redirect to Cognito
+        self.page.goto("http://localhost:8080", wait_until="domcontentloaded", timeout=30000)
+        # Wait extra time for Cognito redirect
+        self.page.wait_for_load_state("networkidle", timeout=30000)
     
     def _find_element(self, selectors: list, timeout: int = 5000):
-        """Try multiple selectors and return the first visible one"""
+        """Try multiple selectors and return the first visible one - with better timeout handling"""
+        # First attempt: quick check
         for selector in selectors:
             try:
                 if self.is_element_visible(selector, timeout=timeout):
@@ -60,7 +67,17 @@ class LoginPage(BasePage):
             except Exception:
                 continue
         
-        raise AssertionError(f"Element not found with any of {len(selectors)} selectors")
+        # Second attempt: longer timeout for Cognito page loads
+        logger.debug(f"First attempt failed, retrying with longer timeout...")
+        for selector in selectors:
+            try:
+                if self.is_element_visible(selector, timeout=10000):
+                    logger.debug(f"Found element on retry with selector: {selector}")
+                    return selector
+            except Exception:
+                continue
+        
+        raise AssertionError(f"Element not found with any of {len(selectors)} selectors after retries")
     
     def enter_email(self, email: str):
         """Enter email with stable selector strategy"""
@@ -122,10 +139,26 @@ class LoginPage(BasePage):
             raise
     
     def is_login_page_visible(self) -> bool:
-        """Check if login page is visible"""
+        """Check if login page is visible - waits for Cognito page to load"""
         try:
-            return self.is_element_visible(self.SIGN_IN_SELECTORS[0], timeout=3000)
-        except Exception:
+            # Try multiple approaches since Cognito takes a moment to load
+            # First try the sign in button selector
+            if self.is_element_visible(self.SIGN_IN_SELECTORS[0], timeout=5000):
+                logger.debug("Login page visible via sign in button")
+                return True
+            
+            # Then try alternative selectors
+            for selector in self.SIGN_IN_SELECTORS[1:]:
+                try:
+                    if self.is_element_visible(selector, timeout=3000):
+                        logger.debug(f"Login page visible via: {selector}")
+                        return True
+                except:
+                    continue
+            
+            return False
+        except Exception as e:
+            logger.debug(f"Error checking login page visibility: {e}")
             return False
     
     def is_error_message_visible(self) -> bool:

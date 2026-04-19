@@ -1,5 +1,5 @@
 """Base Page Object class with stable, reusable methods"""
-from playwright.sync_api import Page, TimeoutError, PlaywrightException
+from playwright.sync_api import Page, TimeoutError, Error
 import logging
 from typing import List, Optional
 

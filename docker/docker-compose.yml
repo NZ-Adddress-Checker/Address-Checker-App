@@ -7,24 +7,70 @@ services:
     env_file:
       - ../backend/.env
     environment:
-      FRONTEND_ORIGIN: http://localhost:8080
+      FRONTEND_ORIGIN: http://address-checker-frontend
     ports:
       - "8000:8000"
     restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   frontend:
     build:
       context: ..
       dockerfile: docker/frontend.Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://address-checker-api:8000}
         VITE_COGNITO_DOMAIN: ${VITE_COGNITO_DOMAIN:-}
         VITE_COGNITO_CLIENT_ID: ${VITE_COGNITO_CLIENT_ID:-}
         VITE_COGNITO_REDIRECT_URI: ${VITE_COGNITO_REDIRECT_URI:-http://localhost:8080/callback}
         VITE_COGNITO_SCOPE: ${VITE_COGNITO_SCOPE:-email+openid+phone}
     container_name: address-checker-frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "8080:80"
     restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  automation:
+    build:
+      context: ..
+      dockerfile: docker/automation.Dockerfile
+    container_name: address-checker-automation
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://address-checker-frontend
+      BACKEND_URL: http://address-checker-api:8000
+      HEADLESS: "true"
+      SLOW_MO: 0
+      TIMEOUT: 30000
+      TEST_USER_EMAIL: ${TEST_USER_EMAIL:-test-user@example.com}
+      TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:-TestPassword123!}
+    volumes:
+      - ./test-results:/app/test-results
+      - ./screenshots:/app/tests/screenshots
+    networks:
+      - app-network
+    restart: "no"
+
+networks:
+  app-network:
+    driver: bridge
