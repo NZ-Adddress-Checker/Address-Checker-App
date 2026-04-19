@@ -1,0 +1,86 @@
+name: Docker Build and Push
+
+on:
+  push:
+    branches: [ Practice ]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'docker/**'
+      - '.github/workflows/docker.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build backend image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        dockerfile: docker/Dockerfile
+        tags: |
+          ${{ github.repository }}-backend:${{ github.sha }}
+          ${{ github.repository }}-backend:latest
+        push: false
+        outputs: type=docker,dest=/tmp/backend-image.tar
+    
+    - name: Load backend image
+      run: |
+        docker load --input /tmp/backend-image.tar
+    
+    - name: Test backend image
+      run: |
+        docker run --rm ${{ github.repository }}-backend:${{ github.sha }} python -c "from main import app; print('✓ Backend container OK')"
+      continue-on-error: true
+    
+    - name: Build frontend image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        dockerfile: docker/frontend.Dockerfile
+        tags: |
+          ${{ github.repository }}-frontend:${{ github.sha }}
+          ${{ github.repository }}-frontend:latest
+        push: false
+        outputs: type=docker,dest=/tmp/frontend-image.tar
+    
+    - name: Load frontend image
+      run: |
+        docker load --input /tmp/frontend-image.tar
+    
+    - name: Test frontend image
+      run: |
+        docker run --rm ${{ github.repository }}-frontend:${{ github.sha }} nginx -t
+      continue-on-error: true
+    
+    - name: Image metadata
+      run: |
+        echo "Backend image: ${{ github.repository }}-backend:${{ github.sha }}"
+        echo "Frontend image: ${{ github.repository }}-frontend:${{ github.sha }}"
+        docker images | grep "${{ github.repository }}"
+    
+    - name: Scan with Trivy (Backend)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ github.repository }}-backend:${{ github.sha }}
+        format: sarif
+        output: backend-trivy-results.sarif
+      continue-on-error: true
+    
+    - name: Upload Trivy results (Backend)
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: backend-trivy-results.sarif
+        category: trivy-backend
+      if: always()

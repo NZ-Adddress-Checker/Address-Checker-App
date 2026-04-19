@@ -1,0 +1,19 @@
+[MASTER]
+# Add <file or directory> to the black list. It should be a base name, not a
+# path. You may set this option multiple times.
+ignore-patterns=test_.*?py
+fail-under=7.0
+
+[MESSAGES CONTROL]
+# C0111: missing-docstring
+# C0103: invalid-name
+# W0212: protected-access
+# R0903: too-few-public-methods
+disable=C0111,C0103,W0212,R0903,W0703
+
+[FORMAT]
+max-line-length=100
+indent-string='    '
+
+[BASIC]
+good-names=i,j,k,ex,Run,_
