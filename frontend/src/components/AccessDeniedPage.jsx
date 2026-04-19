@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { useLogout } from "../hooks/useLogout";
 
 export default function AccessDeniedPage({ username }) {
@@ -21,3 +22,7 @@ export default function AccessDeniedPage({ username }) {
     </main>
   );
 }
+
+AccessDeniedPage.propTypes = {
+  username: PropTypes.string,
+};

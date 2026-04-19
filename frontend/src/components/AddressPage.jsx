@@ -150,6 +150,11 @@ export default function AddressPage() {
             <p>
               <strong>Valid:</strong> {result.is_valid ? "Yes" : "No"}
             </p>
+            {result.normalized_address && (
+              <p>
+                <strong>Normalized:</strong> {result.normalized_address}
+              </p>
+            )}
             <p>
               <strong>Source:</strong> {result.source}
             </p>

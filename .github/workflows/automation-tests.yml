@@ -29,21 +29,21 @@ jobs:
       - name: Build Docker images
         run: |
           cd docker
-          docker-compose build
+          docker compose build
         env:
-          VITE_COGNITO_DOMAIN: ${{ secrets.COGNITO_DOMAIN }}
-          VITE_COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+          VITE_COGNITO_DOMAIN: ${{ secrets.VITE_COGNITO_DOMAIN }}
+          VITE_COGNITO_CLIENT_ID: ${{ secrets.VITE_COGNITO_CLIENT_ID }}
           VITE_COGNITO_REDIRECT_URI: http://localhost:8080/callback
       
       - name: Start application services
         run: |
           cd docker
-          docker-compose up -d backend frontend
+          docker compose up -d backend frontend
           echo "Waiting for services to be healthy..."
           sleep 15
         env:
-          VITE_COGNITO_DOMAIN: ${{ secrets.COGNITO_DOMAIN }}
-          VITE_COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+          VITE_COGNITO_DOMAIN: ${{ secrets.VITE_COGNITO_DOMAIN }}
+          VITE_COGNITO_CLIENT_ID: ${{ secrets.VITE_COGNITO_CLIENT_ID }}
       
       - name: Verify backend is accessible
         run: |
@@ -64,12 +64,12 @@ jobs:
       - name: Run Playwright tests
         run: |
           cd docker
-          docker-compose run --rm automation
+          docker compose run --rm automation
         env:
           TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
           TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
-          VITE_COGNITO_DOMAIN: ${{ secrets.COGNITO_DOMAIN }}
-          VITE_COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+          VITE_COGNITO_DOMAIN: ${{ secrets.VITE_COGNITO_DOMAIN }}
+          VITE_COGNITO_CLIENT_ID: ${{ secrets.VITE_COGNITO_CLIENT_ID }}
       
       - name: Upload test results
         if: always()
@@ -91,15 +91,16 @@ jobs:
         if: always()
         run: |
           cd docker
-          docker-compose down
+          docker compose down
       
       - name: Publish test results
         if: always()
         uses: dorny/test-reporter@v1
         with:
           name: Playwright Test Results
-          path: docker/test-results/report.html
-          reporter: 'html'
+          path: docker/test-results/*.xml
+          reporter: java-junit
+          fail-on-error: false
       
       - name: Comment PR with test results
         if: github.event_name == 'pull_request' && always()

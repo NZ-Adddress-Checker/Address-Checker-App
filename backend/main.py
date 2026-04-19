@@ -51,6 +51,8 @@ app.add_middleware(
 )
 
 logger.info("App '%s' started in env=%s (mock=%s)", settings.app_name, settings.app_env, settings.nzpost_mock)
+if settings.nzpost_mock and settings.app_env == "production":
+    logger.warning("⚠️  NZPOST_MOCK=true in production — address validation is returning fake data!")
 
 
 @app.get("/health")

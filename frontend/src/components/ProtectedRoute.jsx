@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { isAuthenticated } from "../auth/index.js";
@@ -68,3 +69,7 @@ export default function ProtectedRoute({ children }) {
 
   return children;
 }
+
+ProtectedRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};

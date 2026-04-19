@@ -13,3 +13,9 @@ class AddressCheckResponse(BaseModel):
 
 class AddressSuggestionsResponse(BaseModel):
     items: list[str]
+
+
+class UserAuthorizationResponse(BaseModel):
+    has_access: bool
+    groups: list[str]
+    username: str | None = None
