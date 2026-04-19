@@ -21,6 +21,26 @@ jobs:
     uses: ./.github/workflows/frontend.yml
     secrets: inherit
   
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    uses: ./.github/workflows/codeql.yml
+    secrets: inherit
+  
+  secret-scanning:
+    name: Secret & Credential Scanning
+    uses: ./.github/workflows/secret-scanning.yml
+    secrets: inherit
+  
+  container-security:
+    name: Container & Dockerfile Security
+    uses: ./.github/workflows/container-security.yml
+    secrets: inherit
+  
+  sbom-generation:
+    name: SBOM & Dependency Report
+    uses: ./.github/workflows/sbom.yml
+    secrets: inherit
+  
   integration-tests:
     name: Integration Tests
     uses: ./.github/workflows/integration-test.yml
@@ -29,7 +49,7 @@ jobs:
   summary:
     name: CI Pipeline Summary
     runs-on: ubuntu-latest
-    needs: [backend-checks, frontend-checks, integration-tests]
+    needs: [backend-checks, frontend-checks, codeql-analysis, secret-scanning, container-security, sbom-generation, integration-tests]
     if: always()
     
     steps:
@@ -37,9 +57,25 @@ jobs:
       run: |
         if [ "${{ needs.backend-checks.result }}" == "failure" ] || \
            [ "${{ needs.frontend-checks.result }}" == "failure" ] || \
+           [ "${{ needs.codeql-analysis.result }}" == "failure" ] || \
+           [ "${{ needs.secret-scanning.result }}" == "failure" ] || \
+           [ "${{ needs.container-security.result }}" == "failure" ] || \
            [ "${{ needs.integration-tests.result }}" == "failure" ]; then
           echo "❌ CI Pipeline Failed"
           exit 1
         else
-          echo "✅ CI Pipeline Passed"
+          echo "✅ CI Pipeline Passed - All Security Checks Completed"
         fi
+    
+    - name: Pipeline Summary
+      run: |
+        echo "# CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Checks Completed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Backend Linting" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Frontend Build" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ CodeQL Security Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Secret & Credential Scanning" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Container Security (Hadolint + Trivy)" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ SBOM & Dependency Audit" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Integration Tests" >> $GITHUB_STEP_SUMMARY

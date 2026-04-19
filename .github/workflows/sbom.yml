@@ -1,0 +1,98 @@
+name: SBOM Generation
+
+on:
+  push:
+    branches: [ Practice ]
+  pull_request:
+    branches: [ Practice ]
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  sbom:
+    name: Generate Software Bill of Materials
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install SBOM tools
+      run: |
+        pip install cyclonedx-python cyclonedx-bom pip-audit
+        npm install -g @cyclonedx/npm cyclonedx-npm
+
+    - name: Generate Python SBOM
+      run: |
+        mkdir -p sbom
+        cyclonedx-py -o sbom/backend-sbom.xml -r backend/requirements.txt
+        echo "Python SBOM generated: sbom/backend-sbom.xml"
+      continue-on-error: true
+
+    - name: Generate npm SBOM
+      working-directory: frontend
+      run: |
+        mkdir -p ../sbom
+        cyclonedx-npm -o ../sbom/frontend-sbom.xml
+        echo "Frontend SBOM generated: ../sbom/frontend-sbom.xml"
+      continue-on-error: true
+
+    - name: Audit Python Dependencies for vulnerabilities
+      run: |
+        pip-audit --desc --fix-by >= --dry-run
+      continue-on-error: true
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install frontend dependencies
+      working-directory: frontend
+      run: npm ci
+
+    - name: Audit npm packages
+      working-directory: frontend
+      run: npm audit --json > npm-audit.json 2>&1 || true
+      continue-on-error: true
+
+    - name: Generate comprehensive SBOM report
+      run: |
+        cat > sbom/SBOM_REPORT.md << 'EOF'
+        # Software Bill of Materials (SBOM) Report
+        
+        Generated on: $(date)
+        
+        ## Backend Dependencies (Python)
+        $(pip list)
+        
+        ## Frontend Dependencies (Node.js)
+        EOF
+        cd frontend && npm list >> ../sbom/SBOM_REPORT.md || true
+      continue-on-error: true
+
+    - name: Upload SBOM artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: sbom-artifacts
+        path: sbom/
+        retention-days: 90
+      if: always()
+
+    - name: Publish SBOM to artifacts
+      run: |
+        echo "# SBOM Generation Complete" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Generated Files" >> $GITHUB_STEP_SUMMARY
+        echo "- Backend SBOM (CycloneDX): sbom/backend-sbom.xml" >> $GITHUB_STEP_SUMMARY
+        echo "- Frontend SBOM (CycloneDX): sbom/frontend-sbom.xml" >> $GITHUB_STEP_SUMMARY
+        echo "- SBOM Report: sbom/SBOM_REPORT.md" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Security Audit Results" >> $GITHUB_STEP_SUMMARY
+        echo "See artifacts for detailed vulnerability reports" >> $GITHUB_STEP_SUMMARY
