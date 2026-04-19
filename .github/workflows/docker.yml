@@ -79,9 +79,9 @@ jobs:
       continue-on-error: true
     
     - name: Upload Trivy results (Backend)
-      uses: github/codeql-action/upload-sarif@v3
+      uses: actions/upload-artifact@v4
       with:
-        sarif_file: backend-trivy-results.sarif
-        category: trivy-backend
+        name: docker-trivy-backend-sarif
+        path: backend-trivy-results.sarif
       if: always()
 

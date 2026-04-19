@@ -73,10 +73,10 @@ jobs:
       continue-on-error: true
 
     - name: Upload backend Trivy results
-      uses: github/codeql-action/upload-sarif@v3
+      uses: actions/upload-artifact@v4
       with:
-        sarif_file: backend-trivy.sarif
-        category: trivy-backend
+        name: trivy-backend-sarif
+        path: backend-trivy.sarif
       if: always()
 
     - name: Build frontend image
@@ -101,10 +101,10 @@ jobs:
       continue-on-error: true
 
     - name: Upload frontend Trivy results
-      uses: github/codeql-action/upload-sarif@v3
+      uses: actions/upload-artifact@v4
       with:
-        sarif_file: frontend-trivy.sarif
-        category: trivy-frontend
+        name: trivy-frontend-sarif
+        path: frontend-trivy.sarif
       if: always()
 
     - name: Generate Container Security Report
