@@ -1,64 +1,190 @@
-name: Deploy to Production
+name: Deploy to AWS ECS
 
 on:
   push:
-    branches: [ practice ]
+    branches: [practice]
   workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  AWS_REGION: ap-southeast-2
+  ECS_CLUSTER: nz-address-checker
+  # ECR repository names
+  BACKEND_ECR_REPO: nz-post-checker-backend
+  FRONTEND_ECR_REPO: nz-post-checker-frontend
+  # ECS service names
+  BACKEND_SERVICE: backend-service
+  FRONTEND_SERVICE: frontend-service
+  # ECS task definition families
+  BACKEND_TASK_FAMILY: nz-address-checker-backend
+  FRONTEND_TASK_FAMILY: nz-address-checker-frontend
+  # Container names inside the task definitions
+  BACKEND_CONTAINER: nz-address-checker-backend
+  FRONTEND_CONTAINER: nz-address-checker-frontend
 
 jobs:
-  build:
+  # ── Build & push backend image to ECR ────────────────────────────────────────
+  build-backend:
+    name: Build Backend
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-    env:
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      BACKEND_IMAGE: nz-adddress-checker/address-checker-app-backend
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-      if: env.DOCKER_USERNAME != ''
-    
-    - name: Build and push backend
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: docker/Dockerfile
-        push: ${{ env.DOCKER_USERNAME != '' }}
-        tags: |
-          ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-          ${{ env.BACKEND_IMAGE }}:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      image: ${{ steps.set-output.outputs.image }}
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/practice'
-    environment: production
-    
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy notification
-      run: |
-        echo "🚀 Deployment started for image: ${{ needs.build.outputs.image_tag }}"
-        echo "This is where you would deploy to your production environment"
-        echo "Add your deployment commands here (e.g., kubectl, docker pull, etc.)"
-      
-    - name: Verify deployment
-      run: |
-        echo "✅ Deployment verification placeholder"
-        echo "Add health checks and verification here"
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.ecr-login.outputs.registry }}/${{ env.BACKEND_ECR_REPO }}:${{ github.sha }}
+            ${{ steps.ecr-login.outputs.registry }}/${{ env.BACKEND_ECR_REPO }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output image URI
+        id: set-output
+        run: |
+          echo "image=${{ steps.ecr-login.outputs.registry }}/${{ env.BACKEND_ECR_REPO }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+  # ── Build & push frontend image to ECR ───────────────────────────────────────
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.set-output.outputs.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend.Dockerfile
+          push: true
+          # VITE_* vars are baked into the JS bundle at build time.
+          build-args: |
+            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
+            VITE_COGNITO_DOMAIN=${{ secrets.VITE_COGNITO_DOMAIN }}
+            VITE_COGNITO_CLIENT_ID=${{ secrets.VITE_COGNITO_CLIENT_ID }}
+            VITE_COGNITO_REDIRECT_URI=${{ secrets.VITE_COGNITO_REDIRECT_URI }}
+            VITE_COGNITO_SCOPE=${{ secrets.VITE_COGNITO_SCOPE }}
+          tags: |
+            ${{ steps.ecr-login.outputs.registry }}/${{ env.FRONTEND_ECR_REPO }}:${{ github.sha }}
+            ${{ steps.ecr-login.outputs.registry }}/${{ env.FRONTEND_ECR_REPO }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output image URI
+        id: set-output
+        run: |
+          echo "image=${{ steps.ecr-login.outputs.registry }}/${{ env.FRONTEND_ECR_REPO }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+  # ── Deploy both services to ECS ──────────────────────────────────────────────
+  deploy:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ── Backend deployment ──────────────────────────────────────────────────
+      - name: Download current backend task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.BACKEND_TASK_FAMILY }} \
+            --query taskDefinition \
+            > backend-task-def.json
+
+      - name: Inject new backend image into task definition
+        id: backend-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: backend-task-def.json
+          container-name: ${{ env.BACKEND_CONTAINER }}
+          image: ${{ needs.build-backend.outputs.image }}
+
+      - name: Deploy backend to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.backend-task-def.outputs.task-definition }}
+          service: ${{ env.BACKEND_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      # ── Frontend deployment ─────────────────────────────────────────────────
+      - name: Download current frontend task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.FRONTEND_TASK_FAMILY }} \
+            --query taskDefinition \
+            > frontend-task-def.json
+
+      - name: Inject new frontend image into task definition
+        id: frontend-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: frontend-task-def.json
+          container-name: ${{ env.FRONTEND_CONTAINER }}
+          image: ${{ needs.build-frontend.outputs.image }}
+
+      - name: Deploy frontend to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.frontend-task-def.outputs.task-definition }}
+          service: ${{ env.FRONTEND_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Deployment complete"
+          echo "  Backend:  ${{ needs.build-backend.outputs.image }}"
+          echo "  Frontend: ${{ needs.build-frontend.outputs.image }}"
+          echo "  Cluster:  ${{ env.ECS_CLUSTER }}"
 

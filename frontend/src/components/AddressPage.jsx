@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import { checkAddress, getAddressSuggestions } from "../api";
-import { buildAppLogoutUrl, clearAuthSession } from "../auth/index.js";
 import { NZ_ADDRESS_SUGGESTIONS } from "../constants/addressSuggestions";
 import { AUTH_MESSAGES } from "../constants/authMessages";
-import { appConfig, isCognitoConfigured } from "../config";
+import { useLogout } from "../hooks/useLogout";
+
+const DEBOUNCE_MS = 200;
 
 function normalizeError(error) {
   if (error.response?.status === 401) {
@@ -20,15 +20,24 @@ function normalizeError(error) {
 }
 
 export default function AddressPage() {
-  const navigate = useNavigate();
+  const logout = useLogout();
   const [address, setAddress] = useState("");
+  const [debouncedAddress, setDebouncedAddress] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState(NZ_ADDRESS_SUGGESTIONS);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const debounceRef = useRef(null);
 
-  const trimmedInput = address.trim().toLowerCase();
+  // Debounce filtering so the suggestion list doesn't thrash on every keystroke.
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedAddress(address), DEBOUNCE_MS);
+    return () => clearTimeout(debounceRef.current);
+  }, [address]);
+
+  const trimmedInput = debouncedAddress.trim().toLowerCase();
   const suggestions =
     trimmedInput.length < 2
       ? []
@@ -53,26 +62,6 @@ export default function AddressPage() {
       isMounted = false;
     };
   }, []);
-
-  const onLogout = () => {
-    clearAuthSession();
-
-    if (isCognitoConfigured()) {
-      try {
-        const logoutUrl = buildAppLogoutUrl({
-          domain: appConfig.cognito.domain,
-          clientId: appConfig.cognito.clientId,
-          redirectUri: appConfig.cognito.redirectUri,
-        });
-        window.location.assign(logoutUrl);
-        return;
-      } catch {
-        // Fall back to local logout if Cognito logout URL cannot be built.
-      }
-    }
-
-    navigate("/", { replace: true });
-  };
 
   const onSubmit = async (event) => {
     event.preventDefault();
@@ -114,7 +103,7 @@ export default function AddressPage() {
       <section className="card">
         <div className="row-between">
           <h1>Address Validation</h1>
-          <button type="button" className="button secondary" onClick={onLogout}>
+          <button type="button" className="button secondary" onClick={logout}>
             Logout
           </button>
         </div>

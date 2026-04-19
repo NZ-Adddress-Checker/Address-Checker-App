@@ -37,5 +37,19 @@ export function clearTokenStorage() {
 }
 
 export function isAuthenticated() {
-  return Boolean(getToken());
+  const tokens = readTokenStore();
+  if (!tokens?.idToken && !tokens?.accessToken) {
+    return false;
+  }
+
+  // Check token expiry when the server provides `expires_in`.
+  if (tokens.expiresIn && tokens.savedAt) {
+    const expiresAt = tokens.savedAt + tokens.expiresIn * 1000;
+    if (Date.now() >= expiresAt) {
+      localStorage.removeItem(TOKEN_KEY);
+      return false;
+    }
+  }
+
+  return true;
 }
