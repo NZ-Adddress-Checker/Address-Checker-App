@@ -2,16 +2,20 @@ name: Deploy to Production
 
 on:
   push:
-    branches: [ Practice ]
+    branches: [ practice ]
   workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
+      image_tag: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      BACKEND_IMAGE: nz-adddress-checker/address-checker-app-backend
     
     steps:
     - uses: actions/checkout@v4
@@ -26,34 +30,23 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
       if: env.DOCKER_USERNAME != ''
     
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: |
-          ${{ github.repository }}-backend
-        tags: |
-          type=ref,event=branch
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
-    
     - name: Build and push backend
       uses: docker/build-push-action@v5
       with:
         context: .
-        dockerfile: docker/Dockerfile
+        file: docker/Dockerfile
         push: ${{ env.DOCKER_USERNAME != '' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        tags: |
+          ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          ${{ env.BACKEND_IMAGE }}:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/Practice'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/practice'
+    environment: production
     
     steps:
     - uses: actions/checkout@v4
@@ -68,3 +61,4 @@ jobs:
       run: |
         echo "✅ Deployment verification placeholder"
         echo "Add health checks and verification here"
+

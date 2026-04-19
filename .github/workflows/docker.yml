@@ -2,7 +2,7 @@ name: Docker Build and Push
 
 on:
   push:
-    branches: [ Practice ]
+    branches: [ practice ]
     paths:
       - 'backend/**'
       - 'frontend/**'
@@ -10,9 +10,15 @@ on:
       - '.github/workflows/docker.yml'
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    env:
+      BACKEND_IMAGE: nz-adddress-checker/address-checker-app-backend
+      FRONTEND_IMAGE: nz-adddress-checker/address-checker-app-frontend
     
     permissions:
       contents: read
@@ -28,10 +34,10 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        dockerfile: docker/Dockerfile
+        file: docker/Dockerfile
         tags: |
-          ${{ github.repository }}-backend:${{ github.sha }}
-          ${{ github.repository }}-backend:latest
+          ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          ${{ env.BACKEND_IMAGE }}:latest
         push: false
         outputs: type=docker,dest=/tmp/backend-image.tar
     
@@ -41,17 +47,17 @@ jobs:
     
     - name: Test backend image
       run: |
-        docker run --rm ${{ github.repository }}-backend:${{ github.sha }} python -c "from main import app; print('✓ Backend container OK')"
+        docker run --rm ${{ env.BACKEND_IMAGE }}:${{ github.sha }} python -c "from main import app; print('Backend container OK')"
       continue-on-error: true
     
     - name: Build frontend image
       uses: docker/build-push-action@v5
       with:
         context: .
-        dockerfile: docker/frontend.Dockerfile
+        file: docker/frontend.Dockerfile
         tags: |
-          ${{ github.repository }}-frontend:${{ github.sha }}
-          ${{ github.repository }}-frontend:latest
+          ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          ${{ env.FRONTEND_IMAGE }}:latest
         push: false
         outputs: type=docker,dest=/tmp/frontend-image.tar
     
@@ -61,26 +67,27 @@ jobs:
     
     - name: Test frontend image
       run: |
-        docker run --rm ${{ github.repository }}-frontend:${{ github.sha }} nginx -t
+        docker run --rm ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} nginx -t
       continue-on-error: true
     
     - name: Image metadata
       run: |
-        echo "Backend image: ${{ github.repository }}-backend:${{ github.sha }}"
-        echo "Frontend image: ${{ github.repository }}-frontend:${{ github.sha }}"
-        docker images | grep "${{ github.repository }}"
+        echo "Backend image: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
+        echo "Frontend image: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}"
+        docker images | grep "address-checker-app"
     
     - name: Scan with Trivy (Backend)
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ${{ github.repository }}-backend:${{ github.sha }}
+        image-ref: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
         format: sarif
         output: backend-trivy-results.sarif
       continue-on-error: true
     
     - name: Upload Trivy results (Backend)
-      uses: github/codeql-action/upload-sarif@v3
+      uses: actions/upload-artifact@v4
       with:
-        sarif_file: backend-trivy-results.sarif
-        category: trivy-backend
+        name: docker-trivy-backend-sarif
+        path: backend-trivy-results.sarif
       if: always()
+

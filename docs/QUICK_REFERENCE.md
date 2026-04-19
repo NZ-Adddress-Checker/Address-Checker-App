@@ -28,7 +28,20 @@ From GitHub UI:
 
 From CLI:
 ```bash
-gh workflow run deploy.yml -r main
+gh workflow run deploy.yml -r practice
+```
+
+### Authenticated Monitoring (Recommended)
+
+```powershell
+# Use GH_TOKEN to avoid unauthenticated GitHub API rate limits
+$env:GH_TOKEN = "<github_pat_or_app_token>"
+
+# One-time snapshot for the current HEAD on practice
+./scripts/monitor-actions.ps1 -Branch practice
+
+# Continuous watch mode
+./scripts/monitor-actions.ps1 -Branch practice -Watch
 ```
 
 ### Local Testing with Act
@@ -86,11 +99,16 @@ Set these in GitHub Actions Secrets for deployment:
 
 ### Branch Protection Rules
 
-Recommended settings for `main` branch:
+Recommended settings for `practice` branch:
 - ✅ Require status checks to pass before merging
 - ✅ Require branches to be up to date before merging
 - ✅ Require reviews before merging (optional)
 - ✅ Dismiss stale pull request approvals
+
+### Environment Approvals
+
+- Configure `production` environment reviewers in repository Settings → Environments
+- Deploy workflow already targets `production` environment
 
 ### Troubleshooting Workflows
 

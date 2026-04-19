@@ -1,0 +1,11 @@
+# Hadolint configuration file
+# Rules to ignore: https://github.com/hadolint/hadolint/wiki/Rules
+
+# Ignore rules
+ignored:
+  - DL3008  # Pin versions in apt-get
+  - DL3013  # Pin versions in pip
+  - DL3009  # Delete apt-get lists after install
+
+# Hadolint strict mode
+strict: true

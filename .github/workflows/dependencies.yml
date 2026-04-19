@@ -2,17 +2,20 @@ name: Dependency Updates Check
 
 on:
   push:
-    branches: [ Practice ]
+    branches: [ practice ]
     paths:
       - 'backend/requirements.txt'
       - 'frontend/package*.json'
   pull_request:
-    branches: [ Practice ]
+    branches: [ practice ]
     paths:
       - 'backend/requirements.txt'
       - 'frontend/package*.json'
   schedule:
     - cron: '0 0 * * 0'  # Weekly on Sunday
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   check-python-deps:
@@ -66,3 +69,4 @@ jobs:
       working-directory: frontend
       run: npm outdated
       continue-on-error: true
+

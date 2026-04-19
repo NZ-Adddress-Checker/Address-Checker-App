@@ -23,8 +23,8 @@ Runs on changes to `backend/**` directory.
   - Generates and uploads security reports
 
 **Triggers:**
-- Push to `main` or `Practice` branches
-- Pull requests to `main` or `Practice` branches
+- Push to `practice` branch
+- Pull requests to `practice` branch
 
 ### 2. **Frontend CI** (`.github/workflows/frontend.yml`)
 Runs on changes to `frontend/**` directory.
@@ -42,8 +42,8 @@ Runs on changes to `frontend/**` directory.
   - Lists dependencies
 
 **Triggers:**
-- Push to `main` or `Practice` branches
-- Pull requests to `main` or `Practice` branches
+- Push to `practice` branch
+- Pull requests to `practice` branch
 
 ### 3. **Docker Build** (`.github/workflows/docker.yml`)
 Builds and tests Docker images.
@@ -57,7 +57,7 @@ Builds and tests Docker images.
   - Uploads security scan results
 
 **Triggers:**
-- Push to `main` or `Practice` branches
+- Push to `practice` branch
 - Changes to `docker/**` directory
 - Manual trigger via `workflow_dispatch`
 
@@ -72,7 +72,7 @@ Tests integration between components.
   - Verifies build output
 
 **Triggers:**
-- Push to `main` or `Practice` branches
+- Push to `practice` branch
 - Pull requests
 
 ### 5. **Dependency Updates** (`.github/workflows/dependencies.yml`)
@@ -111,7 +111,8 @@ Production deployment pipeline.
   - Optionally pushes to Docker registry
   
 - **deploy**
-  - Runs only on main branch
+- Runs only on `practice` branch
+- Targets the `production` GitHub Environment
   - Placeholder for production deployment
 
 **Requires Secrets:**
@@ -136,17 +137,41 @@ DOCKER_USERNAME  # Your Docker Hub username
 DOCKER_PASSWORD  # Your Docker Hub access token
 ```
 
-### 3. Optional: Configure Branch Protection
+### 3. Configure Branch Protection
 
 To require CI passes before merge:
 
 1. Go to Settings → Branches
-2. Add branch protection rule for `main`
+2. Add branch protection rule for `practice`
 3. Require status checks to pass:
    - Backend Lint & Type Check
    - Frontend Lint & Build
    - Integration Tests
+  - Secret & Credential Scanning
+  - SonarCloud Analysis
 4. Require branches to be up to date before merging
+
+### 4. Configure Environment Approvals
+
+To add manual approval gates before deployment:
+
+1. Go to Settings → Environments
+2. Create or open environment `production`
+3. Add Required reviewers
+4. (Optional) Restrict deployment branches to `practice`
+
+The deploy job in `.github/workflows/deploy.yml` already targets the `production` environment.
+
+### 5. Authenticated Workflow Monitoring (Avoid API Rate Limits)
+
+Use a token when monitoring runs from scripts:
+
+```powershell
+$env:GH_TOKEN = "<github_pat_or_app_token>"
+./scripts/monitor-actions.ps1 -Owner "NZ-Adddress-Checker" -Repo "Address-Checker-App" -Branch "practice" -Watch
+```
+
+Without `GH_TOKEN`, GitHub API polling can hit unauthenticated rate limits.
 
 ## Workflow Status Badges
 
