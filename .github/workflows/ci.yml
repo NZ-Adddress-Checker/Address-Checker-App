@@ -71,9 +71,10 @@ jobs:
         if [ "${{ needs.backend-checks.result }}" == "failure" ] || \
            [ "${{ needs.frontend-checks.result }}" == "failure" ] || \
            [ "${{ needs.automation-tests.result }}" == "failure" ] || \
-            [ "${{ needs.sonarcloud-analysis.result }}" == "failure" ] || \
+           [ "${{ needs.sonarcloud-analysis.result }}" == "failure" ] || \
            [ "${{ needs.secret-scanning.result }}" == "failure" ] || \
            [ "${{ needs.container-security.result }}" == "failure" ] || \
+           [ "${{ needs.sbom-generation.result }}" == "failure" ] || \
            [ "${{ needs.integration-tests.result }}" == "failure" ]; then
           echo "❌ CI Pipeline Failed"
           exit 1
@@ -82,16 +83,18 @@ jobs:
         fi
     
     - name: Pipeline Summary
+      if: always()
       run: |
+        status() { [ "$1" == "success" ] && echo "✅" || [ "$1" == "skipped" ] && echo "⏭️" || echo "❌"; }
         echo "# CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## Checks Completed" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Backend Linting" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Frontend Build" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Playwright Automation Tests" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ SonarCloud Analysis" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Secret & Credential Scanning" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Container Security (Hadolint + Trivy)" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ SBOM & Dependency Audit" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Integration Tests" >> $GITHUB_STEP_SUMMARY
-
+        echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+        echo "| Backend Lint & Test | $(status ${{ needs.backend-checks.result }}) ${{ needs.backend-checks.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Frontend Lint & Build | $(status ${{ needs.frontend-checks.result }}) ${{ needs.frontend-checks.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Playwright Automation Tests | $(status ${{ needs.automation-tests.result }}) ${{ needs.automation-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| SonarCloud Analysis | $(status ${{ needs.sonarcloud-analysis.result }}) ${{ needs.sonarcloud-analysis.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Secret & Credential Scanning | $(status ${{ needs.secret-scanning.result }}) ${{ needs.secret-scanning.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Container Security | $(status ${{ needs.container-security.result }}) ${{ needs.container-security.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| SBOM & Dependency Audit | $(status ${{ needs.sbom-generation.result }}) ${{ needs.sbom-generation.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Integration Tests | $(status ${{ needs.integration-tests.result }}) ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
