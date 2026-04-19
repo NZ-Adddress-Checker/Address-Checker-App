@@ -2,12 +2,12 @@ name: Dependency Updates Check
 
 on:
   push:
-    branches: [ Practice ]
+    branches: [ practice ]
     paths:
       - 'backend/requirements.txt'
       - 'frontend/package*.json'
   pull_request:
-    branches: [ Practice ]
+    branches: [ practice ]
     paths:
       - 'backend/requirements.txt'
       - 'frontend/package*.json'
@@ -66,3 +66,4 @@ jobs:
       working-directory: frontend
       run: npm outdated
       continue-on-error: true
+

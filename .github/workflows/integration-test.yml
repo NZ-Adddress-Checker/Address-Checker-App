@@ -1,10 +1,11 @@
 name: Integration Tests
 
 on:
+  workflow_call:
   push:
-    branches: [ Practice ]
+    branches: [ practice ]
   pull_request:
-    branches: [ Practice ]
+    branches: [ practice ]
 
 jobs:
   integration-tests:
@@ -68,3 +69,5 @@ jobs:
           echo "✗ Frontend build directory not found"
           exit 1
         fi
+
+

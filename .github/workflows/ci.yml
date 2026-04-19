@@ -2,9 +2,9 @@ name: Code Quality and Testing
 
 on:
   push:
-    branches: [ Practice ]
+    branches: [ practice ]
   pull_request:
-    branches: [ Practice ]
+    branches: [ practice ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -79,3 +79,4 @@ jobs:
         echo "- ✅ Container Security (Hadolint + Trivy)" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ SBOM & Dependency Audit" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Integration Tests" >> $GITHUB_STEP_SUMMARY
+

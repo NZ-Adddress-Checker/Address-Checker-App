@@ -1,13 +1,14 @@
 name: Backend CI
 
 on:
+  workflow_call:
   push:
-    branches: [ Practice ]
+    branches: [ practice ]
     paths:
       - 'backend/**'
       - '.github/workflows/backend.yml'
   pull_request:
-    branches: [ Practice ]
+    branches: [ practice ]
     paths:
       - 'backend/**'
 
@@ -79,3 +80,5 @@ jobs:
         name: bandit-report
         path: bandit-report.json
       if: always()
+
+

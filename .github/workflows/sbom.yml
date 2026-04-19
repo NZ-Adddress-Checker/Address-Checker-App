@@ -1,10 +1,11 @@
 name: SBOM Generation
 
 on:
+  workflow_call:
   push:
-    branches: [ Practice ]
+    branches: [ practice ]
   pull_request:
-    branches: [ Practice ]
+    branches: [ practice ]
   schedule:
     - cron: '0 0 * * 0'
 
@@ -96,3 +97,5 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## Security Audit Results" >> $GITHUB_STEP_SUMMARY
         echo "See artifacts for detailed vulnerability reports" >> $GITHUB_STEP_SUMMARY
+
+

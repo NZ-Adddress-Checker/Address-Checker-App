@@ -1,12 +1,13 @@
 name: Container Security Scanning
 
 on:
+  workflow_call:
   push:
-    branches: [ Practice ]
+    branches: [ practice ]
     paths:
       - 'docker/**'
   pull_request:
-    branches: [ Practice ]
+    branches: [ practice ]
     paths:
       - 'docker/**'
 
@@ -112,3 +113,5 @@ jobs:
         echo "# Container Security Scan Results" >> $GITHUB_STEP_SUMMARY
         echo "- Backend: Scanned with Trivy" >> $GITHUB_STEP_SUMMARY
         echo "- Frontend: Scanned with Trivy" >> $GITHUB_STEP_SUMMARY
+
+
