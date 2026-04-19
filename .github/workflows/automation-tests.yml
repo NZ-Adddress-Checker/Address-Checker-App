@@ -104,17 +104,15 @@ jobs:
           script: |
             const fs = require('fs');
             const resultsDir = 'docker/test-results';
-            const passed = context.job === 'success';
-            
             const xmlFiles = fs.existsSync(resultsDir)
               ? fs.readdirSync(resultsDir).filter(f => f.endsWith('.xml'))
               : [];
             
             let comment = '## Automation Test Results\n\n';
             if (xmlFiles.length > 0) {
-              comment += '✅ Test report generated. See the **Playwright Test Results** check and artifacts for details.\n';
+              comment += 'Test report generated. See the **Playwright Test Results** check and artifacts for details.\n';
             } else {
-              comment += '❌ No test results found. Check artifacts for failure details and screenshots.\n';
+              comment += 'No test results found. Check artifacts for failure details and screenshots.\n';
             }
             
             github.rest.issues.createComment({
