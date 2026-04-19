@@ -5,6 +5,9 @@ on:
     branches: [ practice ]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -43,6 +46,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/practice'
+    environment: production
     
     steps:
     - uses: actions/checkout@v4

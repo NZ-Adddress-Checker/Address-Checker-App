@@ -14,6 +14,9 @@ on:
   schedule:
     - cron: '0 0 * * 0'  # Weekly on Sunday
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   check-python-deps:
     runs-on: ubuntu-latest
