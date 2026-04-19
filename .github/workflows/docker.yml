@@ -31,7 +31,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        dockerfile: docker/Dockerfile
+        file: docker/Dockerfile
         tags: |
           ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
           ${{ env.BACKEND_IMAGE }}:latest
@@ -51,7 +51,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        dockerfile: docker/frontend.Dockerfile
+        file: docker/frontend.Dockerfile
         tags: |
           ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
           ${{ env.FRONTEND_IMAGE }}:latest

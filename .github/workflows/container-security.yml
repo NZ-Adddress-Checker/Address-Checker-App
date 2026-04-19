@@ -55,7 +55,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        dockerfile: docker/Dockerfile
+        file: docker/Dockerfile
         push: false
         outputs: type=docker,dest=/tmp/backend-image.tar
         tags: backend-security-scan:latest
@@ -83,7 +83,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        dockerfile: docker/frontend.Dockerfile
+        file: docker/frontend.Dockerfile
         push: false
         outputs: type=docker,dest=/tmp/frontend-image.tar
         tags: frontend-security-scan:latest
