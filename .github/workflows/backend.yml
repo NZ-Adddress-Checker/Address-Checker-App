@@ -14,10 +14,12 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+  PYTHON_VERSION: '3.12'
 
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     
     steps:
     - uses: actions/checkout@v4
@@ -25,7 +27,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
     
     - name: Install dependencies
@@ -52,10 +54,21 @@ jobs:
     - name: Run tests
       run: |
         cd backend
-        python -m pytest ../tests/ -v --tb=short 2>/dev/null || python -c "from main import app; print('Backend imports OK — no tests found')"
+        if python -m pytest ../tests/ -v --tb=short 2>&1; then
+          echo "Tests passed"
+        else
+          exit_code=$?
+          if [ $exit_code -eq 5 ]; then
+            python -c "from main import app; print('Backend imports OK — no tests found')"
+          else
+            echo "Tests failed with exit code $exit_code"
+            exit $exit_code
+          fi
+        fi
 
   security-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     
     steps:
     - uses: actions/checkout@v4
@@ -63,11 +76,11 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
 
     - name: Install bandit
-      run: pip install bandit
+      run: pip install bandit==1.8.3
     
     - name: Run security scan with bandit
       run: |
