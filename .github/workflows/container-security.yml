@@ -18,11 +18,13 @@ jobs:
   hadolint:
     name: Dockerfile Linting
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Run Hadolint on backend Dockerfile
+      id: hadolint-backend
       uses: hadolint/hadolint-action@v3.1.0
       with:
         dockerfile: docker/Dockerfile
@@ -30,6 +32,7 @@ jobs:
       continue-on-error: true
 
     - name: Run Hadolint on frontend Dockerfile
+      id: hadolint-frontend
       uses: hadolint/hadolint-action@v3.1.0
       with:
         dockerfile: docker/frontend.Dockerfile
@@ -39,14 +42,20 @@ jobs:
     - name: Generate Hadolint Report
       if: always()
       run: |
+        backend="${{ steps.hadolint-backend.outcome }}"
+        frontend="${{ steps.hadolint-frontend.outcome }}"
+        icon() { [ "$1" == "success" ] && echo "✅" || echo "⚠️"; }
         echo "# Dockerfile Security Scan Results" >> $GITHUB_STEP_SUMMARY
-        echo "- Backend Dockerfile: Linted" >> $GITHUB_STEP_SUMMARY
-        echo "- Frontend Dockerfile: Linted" >> $GITHUB_STEP_SUMMARY
+        echo "| Dockerfile | Result |" >> $GITHUB_STEP_SUMMARY
+        echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+        echo "| Backend Dockerfile | $(icon $backend) $backend |" >> $GITHUB_STEP_SUMMARY
+        echo "| Frontend Dockerfile | $(icon $frontend) $frontend |" >> $GITHUB_STEP_SUMMARY
 
   container-scan:
     name: Scan Container Images
     runs-on: ubuntu-latest
-    needs: hadolint
+    timeout-minutes: 20
+    # Runs in parallel with hadolint — no dependency between linting and image scanning
 
     steps:
     - uses: actions/checkout@v4
@@ -66,8 +75,9 @@ jobs:
     - name: Load backend image
       run: docker load --input /tmp/backend-image.tar
 
-    - name: Scan backend with Trivy (strict)
-      uses: aquasecurity/trivy-action@master
+    - name: Scan backend with Trivy
+      id: trivy-backend
+      uses: aquasecurity/trivy-action@0.30.0
       with:
         image-ref: backend-security-scan:latest
         format: sarif
@@ -77,10 +87,10 @@ jobs:
 
     - name: Upload backend Trivy results
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: trivy-backend-sarif
         path: backend-trivy.sarif
-      if: always()
 
     - name: Build frontend image
       uses: docker/build-push-action@v5
@@ -94,8 +104,9 @@ jobs:
     - name: Load frontend image
       run: docker load --input /tmp/frontend-image.tar
 
-    - name: Scan frontend with Trivy (strict)
-      uses: aquasecurity/trivy-action@master
+    - name: Scan frontend with Trivy
+      id: trivy-frontend
+      uses: aquasecurity/trivy-action@0.30.0
       with:
         image-ref: frontend-security-scan:latest
         format: sarif
@@ -105,16 +116,19 @@ jobs:
 
     - name: Upload frontend Trivy results
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: trivy-frontend-sarif
         path: frontend-trivy.sarif
-      if: always()
 
     - name: Generate Container Security Report
       if: always()
       run: |
+        backend="${{ steps.trivy-backend.outcome }}"
+        frontend="${{ steps.trivy-frontend.outcome }}"
+        icon() { [ "$1" == "success" ] && echo "✅" || echo "⚠️"; }
         echo "# Container Security Scan Results" >> $GITHUB_STEP_SUMMARY
-        echo "- Backend: Scanned with Trivy" >> $GITHUB_STEP_SUMMARY
-        echo "- Frontend: Scanned with Trivy" >> $GITHUB_STEP_SUMMARY
-
-
+        echo "| Image | Trivy Scan |" >> $GITHUB_STEP_SUMMARY
+        echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+        echo "| Backend | $(icon $backend) $backend |" >> $GITHUB_STEP_SUMMARY
+        echo "| Frontend | $(icon $frontend) $frontend |" >> $GITHUB_STEP_SUMMARY
