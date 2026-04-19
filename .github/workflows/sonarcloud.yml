@@ -11,21 +11,37 @@ jobs:
   sonarcloud:
     name: SonarCloud Scan
     runs-on: ubuntu-latest
-    if: ${{ secrets.SONAR_TOKEN != '' && vars.SONAR_PROJECT_KEY != '' && vars.SONAR_ORGANIZATION != '' }}
 
     steps:
+      - name: Validate SonarCloud configuration
+        id: precheck
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ] || [ -z "$SONAR_PROJECT_KEY" ] || [ -z "$SONAR_ORGANIZATION" ]; then
+            echo "ready=false" >> $GITHUB_OUTPUT
+            echo "SonarCloud skipped: missing SONAR_TOKEN or SONAR_PROJECT_KEY or SONAR_ORGANIZATION"
+          else
+            echo "ready=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout repository
+        if: steps.precheck.outputs.ready == 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Set up Java
+        if: steps.precheck.outputs.ready == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
       - name: SonarCloud Scan
+        if: steps.precheck.outputs.ready == 'true'
         uses: SonarSource/sonarcloud-github-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -37,3 +53,8 @@ jobs:
             -Dsonar.sources=backend,frontend/src
             -Dsonar.exclusions=**/.venv/**,**/node_modules/**,**/dist/**,**/build/**
             -Dsonar.python.version=3.12
+
+      - name: SonarCloud skipped note
+        if: steps.precheck.outputs.ready != 'true'
+        run: |
+          echo "SonarCloud scan skipped because required configuration is missing."
