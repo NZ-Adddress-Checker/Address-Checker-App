@@ -25,7 +25,7 @@ jobs:
     - name: Install SBOM tools
       run: |
         pip install cyclonedx-bom pip-audit
-        npm install -g @cyclonedx/npm cyclonedx-npm
+        npm install -g @cyclonedx/cyclonedx-npm
 
     - name: Generate Python SBOM
       run: |
