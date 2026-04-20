@@ -20,21 +20,23 @@ env:
 jobs:
   check-python-deps:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     
     steps:
     - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
         cache: 'pip'
     
     - name: Install safety
-      run: pip install safety
+      run: pip install safety==3.5.1
     
     - name: Check for known vulnerabilities
-      run: safety check --file backend/requirements.txt --json
+      # safety v3+ uses `scan` (not `check`) and requires a free API key via SAFETY_API_KEY secret
+      run: safety scan --file backend/requirements.txt --output json
       continue-on-error: true
     
     - name: Check outdated packages
@@ -45,6 +47,7 @@ jobs:
 
   check-node-deps:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     
     steps:
     - uses: actions/checkout@v4
@@ -69,4 +72,3 @@ jobs:
       working-directory: frontend
       run: npm outdated
       continue-on-error: true
-
