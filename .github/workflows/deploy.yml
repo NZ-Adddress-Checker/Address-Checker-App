@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -127,6 +126,9 @@ jobs:
     timeout-minutes: 30
     needs: [build-backend, build-frontend]
     environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
 
     steps:
       - name: Checkout
@@ -190,7 +192,11 @@ jobs:
       - name: Deployment summary
         if: always()
         run: |
-          echo "✅ Deployment complete"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Deployment complete"
+          else
+            echo "❌ Deployment failed (status: ${{ job.status }})"
+          fi
           echo "  Backend:  ${{ needs.build-backend.outputs.image }}"
           echo "  Frontend: ${{ needs.build-frontend.outputs.image }}"
           echo "  Cluster:  ${{ env.ECS_CLUSTER }}"
