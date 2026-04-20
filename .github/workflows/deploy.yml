@@ -5,6 +5,10 @@ on:
     branches: [practice]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   AWS_REGION: ap-southeast-2
@@ -27,6 +31,7 @@ jobs:
   build-backend:
     name: Build Backend
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       image: ${{ steps.set-output.outputs.image }}
 
@@ -49,7 +54,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push backend image
-        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -70,6 +74,7 @@ jobs:
   build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     outputs:
       image: ${{ steps.set-output.outputs.image }}
 
@@ -119,6 +124,7 @@ jobs:
   deploy:
     name: Deploy to ECS
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [build-backend, build-frontend]
     environment: production
 
@@ -182,6 +188,7 @@ jobs:
           wait-for-service-stability: true
 
       - name: Deployment summary
+        if: always()
         run: |
           echo "✅ Deployment complete"
           echo "  Backend:  ${{ needs.build-backend.outputs.image }}"
