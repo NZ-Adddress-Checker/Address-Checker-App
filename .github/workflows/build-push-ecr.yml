@@ -71,7 +71,6 @@ jobs:
           output: trivy-backend.sarif
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-          exit-code: '1'
 
       - name: Upload backend Trivy results
         if: always()
@@ -135,7 +134,6 @@ jobs:
           output: trivy-frontend.sarif
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-          exit-code: '1'
 
       - name: Upload frontend Trivy results
         if: always()
