@@ -3,6 +3,8 @@ name: Build and Push to ECR
 on:
   push:
     branches: [mainline]
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 env:
   AWS_REGION: ap-southeast-2
@@ -25,8 +27,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v3
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
