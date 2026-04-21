@@ -14,6 +14,31 @@ function readTokenStore() {
   }
 }
 
+/**
+ * Decodes a JWT payload safely, handling base64url encoding (no padding, - and _ chars).
+ * Returns null if the token is malformed.
+ */
+function decodeJwtPayload(token) {
+  try {
+    const base64url = token.split(".")[1];
+    // Convert base64url → base64 and restore padding
+    const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+}
+
+function isTokenExpired() {
+  const tokens = readTokenStore();
+  if (!tokens?.expiresIn || !tokens?.savedAt) {
+    return false;
+  }
+  const elapsedSeconds = (Date.now() - tokens.savedAt) / 1000;
+  return elapsedSeconds >= tokens.expiresIn;
+}
+
 export function getToken() {
   const tokens = readTokenStore();
   return tokens?.idToken || tokens?.accessToken || null;
@@ -37,5 +62,13 @@ export function clearTokenStorage() {
 }
 
 export function isAuthenticated() {
-  return Boolean(getToken());
+  return Boolean(getToken()) && !isTokenExpired();
+}
+
+export function getUserGroups() {
+  const tokens = readTokenStore();
+  const idToken = tokens?.idToken;
+  if (!idToken) return [];
+  const payload = decodeJwtPayload(idToken);
+  return payload?.["cognito:groups"] ?? [];
 }

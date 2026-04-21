@@ -6,8 +6,10 @@ class Settings(BaseSettings):
 
     app_name: str = "NZ Address Checker API"
     app_env: str = "dev"
-    frontend_origin: str = "http://localhost:5173"
-    frontend_origins: str = ""
+
+    # Comma-separated list of allowed frontend origins.
+    # Example: http://localhost:5173 or https://app.example.com,https://www.example.com
+    frontend_origins: str = "http://localhost:5173"
 
     jwt_issuer: str = ""
     jwt_audience: str = ""
@@ -20,8 +22,7 @@ class Settings(BaseSettings):
 
     @property
     def allowed_frontend_origins(self) -> list[str]:
-        configured = [item.strip() for item in self.frontend_origins.split(",") if item.strip()]
-        return configured or [self.frontend_origin]
+        return [item.strip() for item in self.frontend_origins.split(",") if item.strip()]
 
 
 settings = Settings()

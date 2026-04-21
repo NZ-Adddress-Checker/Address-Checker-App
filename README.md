@@ -1,252 +1,142 @@
 # NZ Address Checker
 
-A secure, production-ready NZ address validation application using FastAPI backend, React frontend with AWS Cognito authentication, and Docker orchestration.
+A full-stack NZ address validation application — FastAPI backend, React frontend with AWS Cognito OAuth2 PKCE authentication, and Docker orchestration.
 
 ## Project Structure
 
 ```
-├── backend/              # FastAPI API with address validation
-├── frontend/             # React app with Cognito OAuth2 PKCE flow
-├── docker/               # Docker & orchestration files
-├── docs/                 # Setup guides and documentation
-└── README.md             # This file
+├── backend/              # FastAPI API with JWT auth and address validation
+├── frontend/             # React + Vite app with Cognito PKCE flow
+├── docker/               # Dockerfiles and docker-compose
+├── .github/workflows/    # CI/CD GitHub Actions pipelines
+└── README.md
 ```
-
-## Features
-
-- ✅ AWS Cognito OAuth2 authentication with PKCE flow
-- ✅ JWT token validation (RS256)
-- ✅ NZ address validation against official database
-- ✅ Docker Compose orchestration
-- ✅ Environment-driven configuration
-- ✅ Health check endpoints for monitoring
 
 ## Architecture
 
 | Component | Technology | Port |
 |-----------|-----------|------|
 | Backend API | FastAPI (Python 3.12) | 8000 |
-| Frontend App | React + Vite (Node 20) | 5173 (local) / 8080 (Docker) |
-| Web Server | Nginx 1.27-alpine | N/A |
-| Auth | AWS Cognito | Hosted UI |
+| Frontend | React + Vite (Node 20) | 5173 (local) / 8080 (Docker) |
+| Web Server | Nginx 1.27-alpine | 8080 (Docker) |
+| Auth | AWS Cognito (Hosted UI) | — |
 
 ## Prerequisites
 
-- **Python** 3.12+ (for local backend development)
-- **Node.js** 20+ (for local frontend development)
-- **Docker Desktop** (for containerized workflow)
-- **AWS Account** with Cognito (for authentication)
+- **Python** 3.12+
+- **Node.js** 20+
+- **Docker Desktop** (for containerised workflow)
+- **AWS Account** with a Cognito User Pool
 
-## Quick Start: Docker (Recommended)
-
-### 1. Setup Cognito
-
-Follow the comprehensive [Cognito Setup Guide](docs/COGNITO_SETUP_GUIDE.md) to:
-- Create User Pool and App Client
-- Configure OAuth scopes and callback URLs
-- Note your Client ID and Domain URL
-
-### 2. Configure Environment
-
-Copy and edit docker environment file:
-```bash
-cp docker/.env.example docker/.env
-```
-
-Update with your Cognito values:
-```env
-VITE_COGNITO_DOMAIN=https://your-domain.auth.ap-southeast-2.amazoncognito.com
-VITE_COGNITO_CLIENT_ID=your-client-id
-VITE_COGNITO_REDIRECT_URI=http://localhost:8080/callback
-VITE_COGNITO_SCOPE=email+openid+phone+profile
-```
-
-### 3. Run Application
-
-```bash
-docker compose -f docker/docker-compose.yml up -d --build
-```
-
-### 4. Access Application
-
-- **Frontend**: http://localhost:8080
-- **Backend API**: http://localhost:8000
-- **Health Check**: 
-  - Backend: `curl http://localhost:8000/health`
-  - Frontend: `curl http://localhost:8080/health`
-
-### 5. Stop Application
-
-```bash
-docker compose -f docker/docker-compose.yml down
-```
+---
 
 ## Local Development
 
-### Backend Setup
+### Backend
 
-1. Create virtual environment:
-   ```bash
-   python -m venv .venv
-   .\.venv\Scripts\Activate  # Windows
-   source .venv/bin/activate # macOS/Linux
-   ```
+```bash
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate   # Windows
+# source .venv/bin/activate  # macOS/Linux
 
-2. Install dependencies:
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   ```
-
-3. Create environment file:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Cognito credentials
-   ```
-
-4. Run development server:
-   ```bash
-   uvicorn main:app --reload --port 8000
-   ```
-
-5. Backend available at: http://localhost:8000
-
-### Frontend Setup
-
-1. Install dependencies:
-   ```bash
-   cd frontend
-   npm install
-   ```
-
-2. Create environment file:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Cognito credentials
-   ```
-
-3. Start development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Frontend available at: http://localhost:5173
-
-## Environment Configuration
-
-### Backend (.env)
-
-```env
-# API Configuration
-ENV=dev  # or 'prod'
-API_PORT=8000
-
-# CORS
-FRONTEND_ORIGIN=http://localhost:5173
-
-# JWT / Cognito
-JWT_ISSUER=https://cognito-idp.ap-southeast-2.amazonaws.com/user-pool-id
-JWT_AUDIENCE=client-id
-JWKS_URL=https://cognito-idp.ap-southeast-2.amazonaws.com/user-pool-id/.well-known/jwks.json
+pip install -r requirements.txt
+cp .env.example .env       # then fill in your values
+uvicorn main:app --reload --port 8000
 ```
 
-### Frontend (.env)
+Backend available at http://localhost:8000
 
-```env
-VITE_API_BASE_URL=http://localhost:8000
-VITE_COGNITO_DOMAIN=https://your-domain.auth.ap-southeast-2.amazoncognito.com
-VITE_COGNITO_CLIENT_ID=your-client-id
-VITE_COGNITO_REDIRECT_URI=http://localhost:5173/callback
-VITE_COGNITO_SCOPE=email+openid+phone+profile
+### Frontend
+
+```bash
+cd frontend
+npm install
+cp .env.example .env       # then fill in your values
+npm run dev
 ```
 
-### Docker (docker/.env)
+Frontend available at http://localhost:5173
 
-```env
-VITE_COGNITO_DOMAIN=https://your-domain.auth.ap-southeast-2.amazoncognito.com
-VITE_COGNITO_CLIENT_ID=your-client-id
-VITE_COGNITO_REDIRECT_URI=http://localhost:8080/callback
-VITE_COGNITO_SCOPE=email+openid+phone+profile
+---
+
+## Docker
+
+```bash
+# Start
+docker compose -f docker/docker-compose.yml up -d --build
+
+# Stop
+docker compose -f docker/docker-compose.yml down
+
+# Logs
+docker compose -f docker/docker-compose.yml logs -f
 ```
+
+- Frontend: http://localhost:8080
+- Backend: http://localhost:8000
+- Health: `curl http://localhost:8000/health`
+
+For Docker, set the Cognito environment variables as shell exports or in a `.env` file alongside `docker-compose.yml` before running `up`.
+
+---
+
+## Environment Variables
+
+### Backend — `backend/.env` (copy from `backend/.env.example`)
+
+| Variable | Description |
+|---|---|
+| `APP_ENV` | `dev` or `prod` |
+| `FRONTEND_ORIGINS` | Comma-separated allowed origins, e.g. `http://localhost:5173` |
+| `JWT_ISSUER` | Cognito issuer URL |
+| `JWT_AUDIENCE` | Cognito app client ID |
+| `JWKS_URL` | Cognito JWKS endpoint |
+| `NZPOST_MOCK` | `true` to use mock data, `false` for real NZ Post API |
+| `NZPOST_API_URL` | NZ Post API endpoint (only needed when mock is false) |
+| `NZPOST_API_KEY` | NZ Post API key (only needed when mock is false) |
+
+### Frontend — `frontend/.env` (copy from `frontend/.env.example`)
+
+| Variable | Description |
+|---|---|
+| `VITE_API_BASE_URL` | Backend URL, e.g. `http://localhost:8000` |
+| `VITE_COGNITO_DOMAIN` | Cognito hosted UI domain URL |
+| `VITE_COGNITO_CLIENT_ID` | Cognito app client ID |
+| `VITE_COGNITO_REDIRECT_URI` | Must match callback URL registered in Cognito |
+| `VITE_COGNITO_SCOPE` | e.g. `email+openid+phone` |
+
+---
 
 ## API Endpoints
 
-### Public Endpoints
+### Public
 
 ```
 GET /health
-Response: {"status":"ok","env":"dev"}
+→ {"status": "ok", "env": "dev"}
 ```
 
-### Protected Endpoints (JWT Required)
+### Protected (requires `Authorization: Bearer <id_token>`)
 
-**Get Address Suggestions**
 ```
-GET /address-suggestions?query=<search-term>
-Header: Authorization: Bearer <jwt-token>
-Response:
-[
-  {"address":"10 Queen Street, Auckland 1010"},
-  {"address":"10 Queen Street, Wellington 6011"}
-]
-```
+GET /address-suggestions
+→ {"items": ["10 Queen Street, Auckland 1010", ...]}
 
-**Validate Address**
-```
 POST /address-check
-Header: Authorization: Bearer <jwt-token>
-Body: {"address":"10 Queen Street, Auckland"}
-Response:
-{
-  "is_valid": true,
-  "normalized_address": "10 Queen Street, Auckland 1010",
-  "source": "mock"
-}
+Body: {"address": "10 Queen Street, Auckland"}
+→ {"is_valid": true, "normalized_address": "10 Queen Street, Auckland", "source": "mock"}
 ```
 
-## Health Checks
-
-Monitor application health:
-
-```bash
-# Backend health
-curl http://localhost:8000/health
-
-# Frontend health (Docker)
-curl http://localhost:8080/health
-```
-
-Expected responses:
-- Backend: `{"status":"ok","env":"dev"}`
-- Frontend: `ok`
+---
 
 ## Troubleshooting
 
-### Docker Issues
+**"Cognito is not configured"** — All four `VITE_COGNITO_*` variables must be set in `frontend/.env`.
 
-**Containers won't start**
-```bash
-# Check logs
-docker compose -f docker/docker-compose.yml logs
+**401 Unauthorized** — Token is missing, expired, or `JWT_AUDIENCE` / `JWT_ISSUER` in `backend/.env` does not match your Cognito pool.
 
-# Restart with fresh build
-docker compose -f docker/docker-compose.yml down
-docker compose -f docker/docker-compose.yml up -d --build
-```
-
-**Port already in use**
-```bash
-# Change ports in docker-compose.yml or stop conflicting services
-docker ps  # Show running containers
-docker stop <container-name>
-```
-
-### Authentication Issues
-
-**"Cognito is not configured"**
-- Verify all `VITE_COGNITO_*` variables are set in `.env` file
-- Check that values match your Cognito app client settings
-- Restart frontend: `npm run dev` (local) or rebuild Docker image
+**Containers won't start** — Run `docker compose -f docker/docker-compose.yml logs` to inspect errors.
 
 **"Invalid redirect URI"**
 - Ensure callback URL in your environment matches Cognito app client settings

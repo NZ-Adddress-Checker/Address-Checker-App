@@ -2,7 +2,7 @@ name: Deploy to Production
 
 on:
   push:
-    branches: [ practice ]
+    branches: [ main ]
   workflow_dispatch:
 
 env:
@@ -15,7 +15,7 @@ jobs:
       image_tag: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      BACKEND_IMAGE: nz-adddress-checker/address-checker-app-backend
+      BACKEND_IMAGE: nz-address-checker/address-checker-app-backend
     
     steps:
     - uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/practice'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
     
     steps:

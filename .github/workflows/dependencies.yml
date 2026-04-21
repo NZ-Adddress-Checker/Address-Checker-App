@@ -2,12 +2,12 @@ name: Dependency Updates Check
 
 on:
   push:
-    branches: [ practice ]
+    branches: [ main ]
     paths:
       - 'backend/requirements.txt'
       - 'frontend/package*.json'
   pull_request:
-    branches: [ practice ]
+    branches: [ main ]
     paths:
       - 'backend/requirements.txt'
       - 'frontend/package*.json'

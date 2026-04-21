@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { checkAddress, getAddressSuggestions } from "../api";
-import { buildAppLogoutUrl, clearAuthSession } from "../auth/index.js";
+import { useLogout } from "../auth/index.js";
 import { NZ_ADDRESS_SUGGESTIONS } from "../constants/addressSuggestions";
 import { AUTH_MESSAGES } from "../constants/authMessages";
-import { appConfig, isCognitoConfigured } from "../config";
 
 function normalizeError(error) {
   if (error.response?.status === 401) {
@@ -20,7 +18,7 @@ function normalizeError(error) {
 }
 
 export default function AddressPage() {
-  const navigate = useNavigate();
+  const onLogout = useLogout();
   const [address, setAddress] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState(NZ_ADDRESS_SUGGESTIONS);
@@ -53,26 +51,6 @@ export default function AddressPage() {
       isMounted = false;
     };
   }, []);
-
-  const onLogout = () => {
-    clearAuthSession();
-
-    if (isCognitoConfigured()) {
-      try {
-        const logoutUrl = buildAppLogoutUrl({
-          domain: appConfig.cognito.domain,
-          clientId: appConfig.cognito.clientId,
-          redirectUri: appConfig.cognito.redirectUri,
-        });
-        window.location.assign(logoutUrl);
-        return;
-      } catch {
-        // Fall back to local logout if Cognito logout URL cannot be built.
-      }
-    }
-
-    navigate("/", { replace: true });
-  };
 
   const onSubmit = async (event) => {
     event.preventDefault();

@@ -2,7 +2,7 @@ name: Docker Build and Push
 
 on:
   push:
-    branches: [ practice ]
+    branches: [ main ]
     paths:
       - 'backend/**'
       - 'frontend/**'
@@ -17,8 +17,8 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     env:
-      BACKEND_IMAGE: nz-adddress-checker/address-checker-app-backend
-      FRONTEND_IMAGE: nz-adddress-checker/address-checker-app-frontend
+      BACKEND_IMAGE: nz-address-checker/address-checker-app-backend
+      FRONTEND_IMAGE: nz-address-checker/address-checker-app-frontend
     
     permissions:
       contents: read

@@ -3,11 +3,11 @@ name: Container Security Scanning
 on:
   workflow_call:
   push:
-    branches: [ practice ]
+    branches: [ main ]
     paths:
       - 'docker/**'
   pull_request:
-    branches: [ practice ]
+    branches: [ main ]
     paths:
       - 'docker/**'
 

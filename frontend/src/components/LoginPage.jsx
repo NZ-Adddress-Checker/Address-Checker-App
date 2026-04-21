@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  buildAppLogoutUrl,
   buildPkceAuthorizeUrl,
-  clearAuthSession,
   consumeLoginRestartPending,
-  markLoginRestartPending,
+  useLogout,
 } from "../auth/index.js";
 import { AUTH_MESSAGES } from "../constants/authMessages";
 import { appConfig, isCognitoConfigured } from "../config";
@@ -14,8 +12,9 @@ const { cognito } = appConfig;
 export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const logout = useLogout();
 
-  const beginLogin = async () => {
+  const beginLogin = useCallback(async () => {
     setError("");
     try {
       setLoading(true);
@@ -30,28 +29,17 @@ export default function LoginPage() {
       setLoading(false);
       setError(err instanceof Error ? err.message : AUTH_MESSAGES.startLoginFailed);
     }
-  };
+  }, []);
 
   const onLogin = async () => {
     setError("");
-
     try {
       if (isCognitoConfigured()) {
-        clearAuthSession();
-        markLoginRestartPending();
-        window.location.assign(
-          buildAppLogoutUrl({
-            domain: cognito.domain,
-            clientId: cognito.clientId,
-            redirectUri: cognito.redirectUri,
-          })
-        );
+        logout();
         return;
       }
-
       await beginLogin();
     } catch (err) {
-      consumeLoginRestartPending();
       setLoading(false);
       setError(err instanceof Error ? err.message : AUTH_MESSAGES.startLoginFailed);
     }
@@ -61,9 +49,8 @@ export default function LoginPage() {
     if (!consumeLoginRestartPending()) {
       return;
     }
-
     void beginLogin();
-  }, []);
+  }, [beginLogin]);
 
   return (
     <main className="screen login-screen">

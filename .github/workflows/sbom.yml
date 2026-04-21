@@ -3,9 +3,9 @@ name: SBOM Generation
 on:
   workflow_call:
   push:
-    branches: [ practice ]
+    branches: [ main ]
   pull_request:
-    branches: [ practice ]
+    branches: [ main ]
   schedule:
     - cron: '0 0 * * 0'
 

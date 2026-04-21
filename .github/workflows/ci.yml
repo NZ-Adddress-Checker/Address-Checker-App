@@ -2,9 +2,9 @@ name: Code Quality and Testing
 
 on:
   push:
-    branches: [ practice ]
+    branches: [ main ]
   pull_request:
-    branches: [ practice ]
+    branches: [ main ]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
