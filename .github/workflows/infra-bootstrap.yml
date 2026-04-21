@@ -1,0 +1,377 @@
+name: Bootstrap AWS Infrastructure
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-2
+  AWS_ACCOUNT_ID: "864144288759"
+  CLUSTER_NAME: address-checker
+  BACKEND_SERVICE: address-checker-backend
+  FRONTEND_SERVICE: address-checker-frontend
+  BACKEND_REPO: address-checker-backend
+  FRONTEND_REPO: address-checker-frontend
+
+jobs:
+  bootstrap:
+    name: Provision ECS Fargate Infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::864144288759:role/github-actions-admin
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Resolve default VPC and subnets
+        id: network
+        run: |
+          VPC_ID=$(aws ec2 describe-vpcs \
+            --filters "Name=isDefault,Values=true" \
+            --query "Vpcs[0].VpcId" --output text)
+          SUBNETS=$(aws ec2 describe-subnets \
+            --filters "Name=vpc-id,Values=$VPC_ID" "Name=defaultForAz,Values=true" \
+            --query "Subnets[*].SubnetId" --output text | tr '\t' ',')
+          echo "vpc_id=$VPC_ID" >> $GITHUB_OUTPUT
+          echo "subnets=$SUBNETS" >> $GITHUB_OUTPUT
+          echo "VPC: $VPC_ID | Subnets: $SUBNETS"
+
+      - name: Create ALB security group
+        id: alb-sg
+        run: |
+          EXISTING=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=address-checker-alb-sg" \
+                      "Name=vpc-id,Values=${{ steps.network.outputs.vpc_id }}" \
+            --query "SecurityGroups[0].GroupId" --output text)
+          if [ "$EXISTING" = "None" ] || [ -z "$EXISTING" ]; then
+            SG=$(aws ec2 create-security-group \
+              --group-name address-checker-alb-sg \
+              --description "ALB - Address Checker" \
+              --vpc-id ${{ steps.network.outputs.vpc_id }} \
+              --query "GroupId" --output text)
+            aws ec2 authorize-security-group-ingress --group-id $SG --protocol tcp --port 80 --cidr 0.0.0.0/0
+            aws ec2 authorize-security-group-ingress --group-id $SG --protocol tcp --port 8000 --cidr 0.0.0.0/0
+            echo "Created ALB SG: $SG"
+          else
+            SG=$EXISTING
+            echo "ALB SG already exists: $SG"
+          fi
+          echo "sg_id=$SG" >> $GITHUB_OUTPUT
+
+      - name: Create ECS tasks security group
+        id: ecs-sg
+        run: |
+          EXISTING=$(aws ec2 describe-security-groups \
+            --filters "Name=group-name,Values=address-checker-ecs-sg" \
+                      "Name=vpc-id,Values=${{ steps.network.outputs.vpc_id }}" \
+            --query "SecurityGroups[0].GroupId" --output text)
+          if [ "$EXISTING" = "None" ] || [ -z "$EXISTING" ]; then
+            SG=$(aws ec2 create-security-group \
+              --group-name address-checker-ecs-sg \
+              --description "ECS tasks - Address Checker" \
+              --vpc-id ${{ steps.network.outputs.vpc_id }} \
+              --query "GroupId" --output text)
+            ALB_SG=${{ steps.alb-sg.outputs.sg_id }}
+            aws ec2 authorize-security-group-ingress --group-id $SG \
+              --ip-permissions "[
+                {\"IpProtocol\":\"tcp\",\"FromPort\":80,\"ToPort\":80,\"UserIdGroupPairs\":[{\"GroupId\":\"$ALB_SG\"}]},
+                {\"IpProtocol\":\"tcp\",\"FromPort\":8000,\"ToPort\":8000,\"UserIdGroupPairs\":[{\"GroupId\":\"$ALB_SG\"}]}
+              ]"
+            echo "Created ECS SG: $SG"
+          else
+            SG=$EXISTING
+            echo "ECS SG already exists: $SG"
+          fi
+          echo "sg_id=$SG" >> $GITHUB_OUTPUT
+
+      - name: Ensure ECS task execution IAM role exists
+        run: |
+          ROLE=$(aws iam get-role --role-name ecsTaskExecutionRole \
+            --query "Role.Arn" --output text 2>/dev/null || echo "")
+          if [ -z "$ROLE" ]; then
+            aws iam create-role \
+              --role-name ecsTaskExecutionRole \
+              --assume-role-policy-document '{
+                "Version":"2012-10-17",
+                "Statement":[{
+                  "Effect":"Allow",
+                  "Principal":{"Service":"ecs-tasks.amazonaws.com"},
+                  "Action":"sts:AssumeRole"
+                }]
+              }'
+            aws iam attach-role-policy \
+              --role-name ecsTaskExecutionRole \
+              --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+            echo "Created ecsTaskExecutionRole"
+          else
+            echo "ecsTaskExecutionRole already exists"
+          fi
+
+      - name: Create ECS cluster
+        run: |
+          aws ecs create-cluster \
+            --cluster-name ${{ env.CLUSTER_NAME }} \
+            --capacity-providers FARGATE \
+            --default-capacity-provider-strategy capacityProvider=FARGATE,weight=1 \
+            2>/dev/null || true
+          echo "Cluster ready: ${{ env.CLUSTER_NAME }}"
+
+      - name: Create CloudWatch log groups
+        run: |
+          aws logs create-log-group --log-group-name /ecs/address-checker-backend 2>/dev/null || true
+          aws logs create-log-group --log-group-name /ecs/address-checker-frontend 2>/dev/null || true
+
+      - name: Create Application Load Balancer
+        id: alb
+        run: |
+          EXISTING=$(aws elbv2 describe-load-balancers \
+            --names address-checker-alb \
+            --query "LoadBalancers[0].LoadBalancerArn" --output text 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "None" ]; then
+            DNS=$(aws elbv2 describe-load-balancers \
+              --names address-checker-alb \
+              --query "LoadBalancers[0].DNSName" --output text)
+            echo "alb_arn=$EXISTING" >> $GITHUB_OUTPUT
+            echo "alb_dns=$DNS" >> $GITHUB_OUTPUT
+            echo "ALB already exists: $DNS"
+          else
+            RESULT=$(aws elbv2 create-load-balancer \
+              --name address-checker-alb \
+              --subnets $(echo "${{ steps.network.outputs.subnets }}" | tr ',' ' ') \
+              --security-groups ${{ steps.alb-sg.outputs.sg_id }} \
+              --scheme internet-facing \
+              --type application \
+              --ip-address-type ipv4)
+            ALB_ARN=$(echo "$RESULT" | jq -r '.LoadBalancers[0].LoadBalancerArn')
+            ALB_DNS=$(echo "$RESULT" | jq -r '.LoadBalancers[0].DNSName')
+            echo "alb_arn=$ALB_ARN" >> $GITHUB_OUTPUT
+            echo "alb_dns=$ALB_DNS" >> $GITHUB_OUTPUT
+            echo "Created ALB: $ALB_DNS"
+          fi
+
+      - name: Create backend target group
+        id: backend-tg
+        run: |
+          EXISTING=$(aws elbv2 describe-target-groups \
+            --names address-checker-backend-tg \
+            --query "TargetGroups[0].TargetGroupArn" --output text 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "None" ]; then
+            echo "tg_arn=$EXISTING" >> $GITHUB_OUTPUT
+          else
+            TG=$(aws elbv2 create-target-group \
+              --name address-checker-backend-tg \
+              --protocol HTTP \
+              --port 8000 \
+              --vpc-id ${{ steps.network.outputs.vpc_id }} \
+              --target-type ip \
+              --health-check-path /health \
+              --health-check-interval-seconds 30 \
+              --healthy-threshold-count 2 \
+              --unhealthy-threshold-count 3 \
+              --query "TargetGroups[0].TargetGroupArn" --output text)
+            echo "tg_arn=$TG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create frontend target group
+        id: frontend-tg
+        run: |
+          EXISTING=$(aws elbv2 describe-target-groups \
+            --names address-checker-frontend-tg \
+            --query "TargetGroups[0].TargetGroupArn" --output text 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "None" ]; then
+            echo "tg_arn=$EXISTING" >> $GITHUB_OUTPUT
+          else
+            TG=$(aws elbv2 create-target-group \
+              --name address-checker-frontend-tg \
+              --protocol HTTP \
+              --port 80 \
+              --vpc-id ${{ steps.network.outputs.vpc_id }} \
+              --target-type ip \
+              --health-check-path / \
+              --health-check-interval-seconds 30 \
+              --healthy-threshold-count 2 \
+              --unhealthy-threshold-count 3 \
+              --query "TargetGroups[0].TargetGroupArn" --output text)
+            echo "tg_arn=$TG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create ALB listener port 80 → frontend
+        run: |
+          EXISTING=$(aws elbv2 describe-listeners \
+            --load-balancer-arn ${{ steps.alb.outputs.alb_arn }} \
+            --query "Listeners[?Port==\`80\`].ListenerArn" --output text 2>/dev/null || echo "")
+          if [ -z "$EXISTING" ] || [ "$EXISTING" = "None" ]; then
+            aws elbv2 create-listener \
+              --load-balancer-arn ${{ steps.alb.outputs.alb_arn }} \
+              --protocol HTTP --port 80 \
+              --default-actions Type=forward,TargetGroupArn=${{ steps.frontend-tg.outputs.tg_arn }}
+          fi
+
+      - name: Create ALB listener port 8000 → backend
+        run: |
+          EXISTING=$(aws elbv2 describe-listeners \
+            --load-balancer-arn ${{ steps.alb.outputs.alb_arn }} \
+            --query "Listeners[?Port==\`8000\`].ListenerArn" --output text 2>/dev/null || echo "")
+          if [ -z "$EXISTING" ] || [ "$EXISTING" = "None" ]; then
+            aws elbv2 create-listener \
+              --load-balancer-arn ${{ steps.alb.outputs.alb_arn }} \
+              --protocol HTTP --port 8000 \
+              --default-actions Type=forward,TargetGroupArn=${{ steps.backend-tg.outputs.tg_arn }}
+          fi
+
+      - name: Register backend task definition
+        id: backend-td
+        env:
+          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
+          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
+          JWKS_URL: ${{ secrets.JWKS_URL }}
+        run: |
+          jq -n \
+            --arg account "${{ env.AWS_ACCOUNT_ID }}" \
+            --arg region "${{ env.AWS_REGION }}" \
+            --arg repo "${{ env.BACKEND_REPO }}" \
+            --arg jwt_issuer "$JWT_ISSUER" \
+            --arg jwt_audience "$JWT_AUDIENCE" \
+            --arg jwks_url "$JWKS_URL" \
+            --arg frontend_origins "http://${{ steps.alb.outputs.alb_dns }}" \
+            '{
+              family: "address-checker-backend",
+              networkMode: "awsvpc",
+              requiresCompatibilities: ["FARGATE"],
+              cpu: "256",
+              memory: "512",
+              executionRoleArn: "arn:aws:iam::\($account):role/ecsTaskExecutionRole",
+              containerDefinitions: [{
+                name: "backend",
+                image: "\($account).dkr.ecr.\($region).amazonaws.com/\($repo):latest",
+                portMappings: [{containerPort: 8000, protocol: "tcp"}],
+                environment: [
+                  {name: "APP_ENV",           value: "prod"},
+                  {name: "FRONTEND_ORIGINS",  value: $frontend_origins},
+                  {name: "JWT_ISSUER",        value: $jwt_issuer},
+                  {name: "JWT_AUDIENCE",      value: $jwt_audience},
+                  {name: "JWKS_URL",          value: $jwks_url},
+                  {name: "NZPOST_MOCK",       value: "true"}
+                ],
+                logConfiguration: {
+                  logDriver: "awslogs",
+                  options: {
+                    "awslogs-group": "/ecs/address-checker-backend",
+                    "awslogs-region": $region,
+                    "awslogs-stream-prefix": "ecs"
+                  }
+                }
+              }]
+            }' > backend-task-def.json
+          TD=$(aws ecs register-task-definition \
+            --cli-input-json file://backend-task-def.json \
+            --query "taskDefinition.taskDefinitionArn" --output text)
+          echo "td_arn=$TD" >> $GITHUB_OUTPUT
+
+      - name: Register frontend task definition
+        id: frontend-td
+        run: |
+          jq -n \
+            --arg account "${{ env.AWS_ACCOUNT_ID }}" \
+            --arg region "${{ env.AWS_REGION }}" \
+            --arg repo "${{ env.FRONTEND_REPO }}" \
+            '{
+              family: "address-checker-frontend",
+              networkMode: "awsvpc",
+              requiresCompatibilities: ["FARGATE"],
+              cpu: "256",
+              memory: "512",
+              executionRoleArn: "arn:aws:iam::\($account):role/ecsTaskExecutionRole",
+              containerDefinitions: [{
+                name: "frontend",
+                image: "\($account).dkr.ecr.\($region).amazonaws.com/\($repo):latest",
+                portMappings: [{containerPort: 80, protocol: "tcp"}],
+                logConfiguration: {
+                  logDriver: "awslogs",
+                  options: {
+                    "awslogs-group": "/ecs/address-checker-frontend",
+                    "awslogs-region": $region,
+                    "awslogs-stream-prefix": "ecs"
+                  }
+                }
+              }]
+            }' > frontend-task-def.json
+          TD=$(aws ecs register-task-definition \
+            --cli-input-json file://frontend-task-def.json \
+            --query "taskDefinition.taskDefinitionArn" --output text)
+          echo "td_arn=$TD" >> $GITHUB_OUTPUT
+
+      - name: Create or update backend ECS service
+        run: |
+          SUBNETS="${{ steps.network.outputs.subnets }}"
+          SG="${{ steps.ecs-sg.outputs.sg_id }}"
+          EXISTING=$(aws ecs describe-services \
+            --cluster ${{ env.CLUSTER_NAME }} \
+            --services ${{ env.BACKEND_SERVICE }} \
+            --query "services[?status=='ACTIVE'].serviceArn" --output text 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            aws ecs update-service \
+              --cluster ${{ env.CLUSTER_NAME }} \
+              --service ${{ env.BACKEND_SERVICE }} \
+              --task-definition ${{ steps.backend-td.outputs.td_arn }} \
+              --desired-count 1
+          else
+            aws ecs create-service \
+              --cluster ${{ env.CLUSTER_NAME }} \
+              --service-name ${{ env.BACKEND_SERVICE }} \
+              --task-definition ${{ steps.backend-td.outputs.td_arn }} \
+              --desired-count 1 \
+              --launch-type FARGATE \
+              --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=ENABLED}" \
+              --load-balancers "targetGroupArn=${{ steps.backend-tg.outputs.tg_arn }},containerName=backend,containerPort=8000"
+          fi
+
+      - name: Create or update frontend ECS service
+        run: |
+          SUBNETS="${{ steps.network.outputs.subnets }}"
+          SG="${{ steps.ecs-sg.outputs.sg_id }}"
+          EXISTING=$(aws ecs describe-services \
+            --cluster ${{ env.CLUSTER_NAME }} \
+            --services ${{ env.FRONTEND_SERVICE }} \
+            --query "services[?status=='ACTIVE'].serviceArn" --output text 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            aws ecs update-service \
+              --cluster ${{ env.CLUSTER_NAME }} \
+              --service ${{ env.FRONTEND_SERVICE }} \
+              --task-definition ${{ steps.frontend-td.outputs.td_arn }} \
+              --desired-count 1
+          else
+            aws ecs create-service \
+              --cluster ${{ env.CLUSTER_NAME }} \
+              --service-name ${{ env.FRONTEND_SERVICE }} \
+              --task-definition ${{ steps.frontend-td.outputs.td_arn }} \
+              --desired-count 1 \
+              --launch-type FARGATE \
+              --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=ENABLED}" \
+              --load-balancers "targetGroupArn=${{ steps.frontend-tg.outputs.tg_arn }},containerName=frontend,containerPort=80"
+          fi
+
+      - name: Output application URLs
+        run: |
+          echo "=================================================="
+          echo "Infrastructure provisioned successfully!"
+          echo ""
+          echo "  Frontend:    http://${{ steps.alb.outputs.alb_dns }}"
+          echo "  Backend API: http://${{ steps.alb.outputs.alb_dns }}:8000"
+          echo "  Health:      http://${{ steps.alb.outputs.alb_dns }}:8000/health"
+          echo ""
+          echo "NEXT STEPS:"
+          echo "  1. Set GitHub Actions variable VITE_API_BASE_URL to:"
+          echo "     http://${{ steps.alb.outputs.alb_dns }}:8000"
+          echo "  2. Re-run the 'Build and Push to ECR' workflow so the"
+          echo "     frontend image is rebuilt with the correct API URL."
+          echo "  3. Set GitHub Actions variables:"
+          echo "     ECS_CLUSTER=${{ env.CLUSTER_NAME }}"
+          echo "     ECS_BACKEND_SERVICE=${{ env.BACKEND_SERVICE }}"
+          echo "     ECS_FRONTEND_SERVICE=${{ env.FRONTEND_SERVICE }}"
+          echo "=================================================="
