@@ -12,11 +12,27 @@ env:
 permissions:
   id-token: write
   contents: read
+  security-events: write
 
 jobs:
+  sonarcloud:
+    name: SonarCloud SAST
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
   build-and-push:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
+    needs: sonarcloud
 
     steps:
       - name: Checkout code
@@ -37,7 +53,8 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push backend image
+      - name: Build backend image
+        id: build-backend
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
@@ -47,10 +64,33 @@ jobs:
             -t $ECR_REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG \
             -t $ECR_REGISTRY/$ECR_BACKEND_REPO:latest \
             .
+
+      - name: Trivy scan backend image
+        uses: aquasecurity/trivy-action@0.31.0
+        with:
+          image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_BACKEND_REPO }}:${{ github.sha }}
+          format: sarif
+          output: trivy-backend.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Upload backend Trivy results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-backend.sarif
+          category: trivy-backend
+
+      - name: Push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
           docker push $ECR_REGISTRY/$ECR_BACKEND_REPO:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_BACKEND_REPO:latest
 
-      - name: Build and push frontend image
+      - name: Build frontend image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
@@ -65,5 +105,28 @@ jobs:
             -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG \
             -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:latest \
             .
+
+      - name: Trivy scan frontend image
+        uses: aquasecurity/trivy-action@0.31.0
+        with:
+          image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_FRONTEND_REPO }}:${{ github.sha }}
+          format: sarif
+          output: trivy-frontend.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Upload frontend Trivy results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-frontend.sarif
+          category: trivy-frontend
+
+      - name: Push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
           docker push $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_FRONTEND_REPO:latest
