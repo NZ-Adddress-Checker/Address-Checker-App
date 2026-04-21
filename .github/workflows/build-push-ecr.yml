@@ -66,7 +66,7 @@ jobs:
             .
 
       - name: Trivy scan backend image
-        uses: aquasecurity/trivy-action@0.31.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_BACKEND_REPO }}:${{ github.sha }}
           format: sarif
@@ -107,7 +107,7 @@ jobs:
             .
 
       - name: Trivy scan frontend image
-        uses: aquasecurity/trivy-action@0.31.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_FRONTEND_REPO }}:${{ github.sha }}
           format: sarif
