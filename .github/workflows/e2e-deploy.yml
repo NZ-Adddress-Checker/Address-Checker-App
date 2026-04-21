@@ -6,6 +6,10 @@ on:
     types: [completed]
     branches: [mainline]
 
+permissions:
+  id-token: write
+  contents: read
+
 env:
   AWS_REGION: ap-southeast-2
 
