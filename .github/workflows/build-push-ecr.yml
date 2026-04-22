@@ -31,6 +31,8 @@ jobs:
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6.0.0
+        with:
+          projectBaseDir: app
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -123,11 +125,12 @@ jobs:
         run: |
           docker build \
             -f ${{ env.APP_DIR }}/frontend/Dockerfile \
-            --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} \
-            --build-arg VITE_COGNITO_DOMAIN=${{ secrets.VITE_COGNITO_DOMAIN }} \
-            --build-arg VITE_COGNITO_CLIENT_ID=${{ secrets.VITE_COGNITO_CLIENT_ID }} \
-            --build-arg VITE_COGNITO_REDIRECT_URI=${{ secrets.VITE_COGNITO_REDIRECT_URI }} \
-            --build-arg VITE_COGNITO_SCOPE=${{ secrets.VITE_COGNITO_SCOPE }} \
+            --build-arg REACT_APP_API_URL=${{ secrets.REACT_APP_API_URL }} \
+            --build-arg REACT_APP_COGNITO_AUTHORITY=${{ secrets.REACT_APP_COGNITO_AUTHORITY }} \
+            --build-arg REACT_APP_COGNITO_DOMAIN=${{ secrets.REACT_APP_COGNITO_DOMAIN }} \
+            --build-arg REACT_APP_COGNITO_CLIENT_ID=${{ secrets.REACT_APP_COGNITO_CLIENT_ID }} \
+            --build-arg REACT_APP_REDIRECT_URI=${{ secrets.REACT_APP_REDIRECT_URI }} \
+            --build-arg REACT_APP_LOGOUT_URI=${{ secrets.REACT_APP_LOGOUT_URI }} \
             -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG \
             -t $ECR_REGISTRY/$ECR_FRONTEND_REPO:latest \
             ${{ env.APP_DIR }}/frontend
@@ -167,14 +170,13 @@ jobs:
 
       - name: Create backend test environment
         run: |
-          cat > ${{ env.APP_DIR }}/.env << 'EOF'
-          APP_ENV=test
-          FRONTEND_ORIGINS=http://localhost:8085
-          JWT_ISSUER=https://cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_test
-          JWT_AUDIENCE=test-client-id
-          JWKS_URL=https://cognito-idp.ap-southeast-2.amazonaws.com/ap-southeast-2_test/.well-known/jwks.json
-          NZPOST_MOCK=true
-          EOF
+          printf '%s\n' \
+            'COGNITO_REGION=ap-southeast-2' \
+            'USER_POOL_ID=ap-southeast-2_2oQQDAKa4' \
+            'CLIENT_ID=4p7i1nq2t426jufkh0pe7fgo2u' \
+            'NZPOST_API_KEY=A_xWMNLslywtPO2DQ8jiMg' \
+            'CORS_ORIGIN=http://localhost:8085' \
+            > ${{ env.APP_DIR }}/.env
 
       - name: Start app with Docker Compose
         env:

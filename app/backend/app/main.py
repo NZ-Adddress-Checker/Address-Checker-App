@@ -14,3 +14,8 @@ app.add_middleware(
 )
 
 app.include_router(address.router, prefix="/api/address")
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

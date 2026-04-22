@@ -1,6 +1,7 @@
 playwright==1.49.0
 pytest==8.3.2
 pytest-html==4.1.1
+pytest-timeout==2.3.1
 requests==2.32.3
 jsonschema==4.23.0
 PyJWT==2.9.0

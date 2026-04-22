@@ -1,3 +1,5 @@
+import os
+
 BASE_URL = "http://localhost:8085"
 API_URL = "http://localhost:8001/api"
 NZPOST_API_KEY = "A_xWMNLslywtPO2DQ8jiMg"
@@ -13,5 +15,6 @@ USERS = {
     }
 }
 
-HEADLESS = False
-SLOW_MO = 300
+# In CI environments (GitHub Actions sets CI=true), run headless automatically
+HEADLESS = os.environ.get("CI", "false").lower() == "true" or os.environ.get("HEADLESS", "false").lower() == "true"
+SLOW_MO = 0 if HEADLESS else 300
