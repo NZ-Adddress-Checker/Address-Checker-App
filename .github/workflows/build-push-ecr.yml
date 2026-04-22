@@ -318,6 +318,20 @@ jobs:
             --query 'taskDefinition.taskDefinitionArn' --output text)
           echo "td_arn=$TD_ARN" >> $GITHUB_OUTPUT
 
+      - name: Drain stale targets from frontend ALB target group
+        run: |
+          FRONTEND_TG_ARN=$(aws elbv2 describe-target-groups \
+            --names address-checker-frontend-tg \
+            --query 'TargetGroups[0].TargetGroupArn' --output text \
+            --region ${{ env.AWS_REGION }})
+          echo "Frontend TG: $FRONTEND_TG_ARN"
+          echo "=== All registered targets ==="
+          aws elbv2 describe-target-health \
+            --target-group-arn "$FRONTEND_TG_ARN" \
+            --query 'TargetHealthDescriptions[*].{Id:Target.Id,Port:Target.Port,State:TargetHealth.State}' \
+            --output table \
+            --region ${{ env.AWS_REGION }}
+
       - name: Deploy backend to ECS
         run: |
           aws ecs update-service \
