@@ -27,11 +27,11 @@ class LoginPage(BasePage):
         # Click Start and wait for the full sequence to settle on Cognito login
         self.page.click(self.START, timeout=5000)
 
-        # Wait for all hops to complete — final URL must be on amazoncognito.com
-        self.page.wait_for_url("**/amazoncognito.com/**", timeout=25000)
-
-        # Wait for the username field to appear
-        self.page.wait_for_selector(self.USERNAME, timeout=15000)
+        # Wait directly for the Cognito username field.
+        # This handles all redirect hops (Start → Cognito logout → localhost →
+        # signinRedirect → Cognito login) without depending on URL pattern matching
+        # or the `load` event, both of which are unreliable in CI for hosted-UI pages.
+        self.page.wait_for_selector(self.USERNAME, timeout=35000)
         # Step 1: username
         self.fill(self.USERNAME, user)
         self.click(self.SUBMIT)
