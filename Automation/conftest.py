@@ -1,6 +1,31 @@
+import logging
 import pytest
+import requests
 from playwright.sync_api import sync_playwright
 from config import HEADLESS, SLOW_MO
+
+logger = logging.getLogger(__name__)
+
+
+def _log_response(response, *args, **kwargs):
+    """Requests event hook: logs every HTTP request and its response status."""
+    logger.info("%s %s -> %s", response.request.method, response.request.url, response.status_code)
+
+
+@pytest.fixture(autouse=True)
+def http_logging():
+    """Attach the response hook to the requests Session for every test."""
+    requests.Session.send_original = requests.Session.send
+
+    def patched_send(self, request, **kwargs):
+        response = self.send_original(request, **kwargs)
+        _log_response(response)
+        return response
+
+    requests.Session.send = patched_send
+    yield
+    requests.Session.send = requests.Session.send_original
+    del requests.Session.send_original
 
 @pytest.fixture(scope="session")
 def browser():
