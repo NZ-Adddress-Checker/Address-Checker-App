@@ -230,7 +230,6 @@ jobs:
           COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
           USER_POOL_ID: ${{ secrets.USER_POOL_ID }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          NZPOST_API_KEY: ${{ secrets.NZPOST_API_KEY }}
         run: |
           jq -n \
             --arg account "${{ env.AWS_ACCOUNT_ID }}" \
@@ -239,7 +238,6 @@ jobs:
             --arg cognito_region "$COGNITO_REGION" \
             --arg user_pool_id "$USER_POOL_ID" \
             --arg client_id "$CLIENT_ID" \
-            --arg nzpost_api_key "$NZPOST_API_KEY" \
             --arg cors_origin "http://${{ steps.alb.outputs.alb_dns }}" \
             '{
               family: "address-checker-backend",
@@ -256,7 +254,6 @@ jobs:
                   {name: "COGNITO_REGION", value: $cognito_region},
                   {name: "USER_POOL_ID",   value: $user_pool_id},
                   {name: "CLIENT_ID",      value: $client_id},
-                  {name: "NZPOST_API_KEY", value: $nzpost_api_key},
                   {name: "CORS_ORIGIN",    value: $cors_origin}
                 ],
                 logConfiguration: {

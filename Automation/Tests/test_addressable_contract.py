@@ -2,44 +2,41 @@ import pytest
 import requests
 from jsonschema import validate
 from schemas.addressable_schema import ADDRESSABLE_SCHEMA
-from config import NZPOST_API_KEY
 
 
-URL = "https://api.addressable.dev/v2/autocomplete"
+URL = "https://nominatim.openstreetmap.org/search"
+HEADERS = {"User-Agent": "NZ-Address-Checker/1.0"}
+BASE_PARAMS = {"countrycodes": "nz", "format": "json", "addressdetails": 0}
 
 
-# Note: These tests consume daily API quota (100 requests/day free tier)
-# Skip by default. Run with: pytest -m external or pytest -m contract
-@pytest.mark.skip(reason="Skipped by default to preserve API quota. Run with: pytest -m external")
 @pytest.mark.external
 @pytest.mark.contract
-def test_addressable_returns_list():
-    """Addressable API returns a non-empty list for a known NZ query."""
-    res = requests.get(URL, params={"q": "1 Main Street", "country_code": "NZ", "api_key": NZPOST_API_KEY, "max_results": 3})
+def test_nominatim_returns_list():
+    """Nominatim returns a non-empty list for a known NZ query."""
+    res = requests.get(URL, params={**BASE_PARAMS, "q": "1 Main Street", "limit": 3}, headers=HEADERS)
     assert res.status_code == 200
     data = res.json()
     assert isinstance(data, list)
     assert len(data) > 0
 
 
-@pytest.mark.skip(reason="Skipped by default to preserve API quota. Run with: pytest -m external")
 @pytest.mark.external
 @pytest.mark.contract
-def test_addressable_items_have_formatted_field():
-    """Each result from Addressable API includes a formatted address string."""
-    res = requests.get(URL, params={"q": "Auckland", "country_code": "NZ", "api_key": NZPOST_API_KEY, "max_results": 3})
+def test_nominatim_items_have_display_name():
+    """Each result from Nominatim includes a display_name string."""
+    res = requests.get(URL, params={**BASE_PARAMS, "q": "Auckland", "limit": 3}, headers=HEADERS)
     assert res.status_code == 200
     for item in res.json():
-        assert "formatted" in item
-        assert isinstance(item["formatted"], str)
-        assert len(item["formatted"]) > 0
+        assert "display_name" in item
+        assert isinstance(item["display_name"], str)
+        assert len(item["display_name"]) > 0
 
 
-@pytest.mark.skip(reason="Skipped by default to preserve API quota. Run with: pytest -m external")
 @pytest.mark.external
 @pytest.mark.contract
-def test_addressable_schema():
-    """Addressable API response matches the expected JSON schema."""
-    res = requests.get(URL, params={"q": "Wellington", "country_code": "NZ", "api_key": NZPOST_API_KEY, "max_results": 3})
+def test_nominatim_schema():
+    """Nominatim response matches the expected JSON schema (formatted field mapped)."""
+    res = requests.get(URL, params={**BASE_PARAMS, "q": "Wellington", "limit": 3}, headers=HEADERS)
     assert res.status_code == 200
-    validate(instance=res.json(), schema=ADDRESSABLE_SCHEMA)
+    mapped = [{"formatted": item["display_name"]} for item in res.json()]
+    validate(instance=mapped, schema=ADDRESSABLE_SCHEMA)

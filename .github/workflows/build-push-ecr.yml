@@ -174,7 +174,6 @@ jobs:
             'COGNITO_REGION=ap-southeast-2' \
             'USER_POOL_ID=ap-southeast-2_2oQQDAKa4' \
             'CLIENT_ID=4p7i1nq2t426jufkh0pe7fgo2u' \
-            'NZPOST_API_KEY=A_xWMNLslywtPO2DQ8jiMg' \
             'CORS_ORIGIN=http://localhost:8085' \
             > ${{ env.APP_DIR }}/.env
 
