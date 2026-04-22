@@ -179,12 +179,6 @@ jobs:
             > ${{ env.APP_DIR }}/.env
 
       - name: Start app with Docker Compose
-        env:
-          VITE_API_BASE_URL: http://localhost:8001
-          VITE_COGNITO_DOMAIN: https://test-domain.auth.ap-southeast-2.amazoncognito.com
-          VITE_COGNITO_CLIENT_ID: test-client-id
-          VITE_COGNITO_REDIRECT_URI: http://localhost:8085/callback
-          VITE_COGNITO_SCOPE: email+openid+phone
         run: docker compose -f ${{ env.APP_DIR }}/docker-compose.yml up -d --build
 
       - name: Wait for backend to be healthy
@@ -222,27 +216,41 @@ jobs:
           pip install -r ${{ env.AUTOMATION_DIR }}/requirements.txt
           python -m playwright install chromium --with-deps
 
-      - name: Run Playwright automation tests
+      - name: Run API and security tests
         run: |
-          python -m pytest ${{ env.AUTOMATION_DIR }}/Tests/test_ui_flow.py \
+          python -m pytest \
+            Tests/test_backend_api.py \
+            Tests/test_jwt_security.py \
+            Tests/test_address_api.py \
+            Tests/test_error_handling.py \
             -v --tb=short \
-            --html=${{ env.AUTOMATION_DIR }}/report.html \
+            --html=report-api.html \
             --self-contained-html
+        working-directory: ${{ env.AUTOMATION_DIR }}
 
-      - name: Upload Playwright report
+      - name: Run Playwright UI tests
+        run: |
+          python -m pytest Tests/test_ui_flow.py \
+            -v --tb=short \
+            --html=report-ui.html \
+            --self-contained-html
+        working-directory: ${{ env.AUTOMATION_DIR }}
+
+      - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: automation-reports
           path: |
-            ${{ env.AUTOMATION_DIR }}/report.html
+            ${{ env.AUTOMATION_DIR }}/report-api.html
+            ${{ env.AUTOMATION_DIR }}/report-ui.html
             ${{ env.AUTOMATION_DIR }}/screenshots/
             ${{ env.AUTOMATION_DIR }}/test-results/
           retention-days: 7
 
       - name: Stop Docker Compose
         if: always()
-        run: docker compose -f ${{ env.APP_DIR }}/docker-compose.yml down
+        run: docker compose -f ${{ env.APP_DIR }}/docker-compose.yml down -v
 
   deploy:
     name: Deploy to ECS Fargate
