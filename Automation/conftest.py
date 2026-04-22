@@ -4,28 +4,27 @@ import requests
 from playwright.sync_api import sync_playwright
 from config import HEADLESS, SLOW_MO
 
-logger = logging.getLogger(__name__)
+# Ensure the root logger passes INFO records through to pytest's capture handler.
+# By default the root logger level is WARNING, which silently drops INFO records
+# before they reach any handler — including pytest-html's log capture.
+logging.getLogger().setLevel(logging.INFO)
 
-
-def _log_response(response, *args, **kwargs):
-    """Requests event hook: logs every HTTP request and its response status."""
-    logger.info("%s %s -> %s", response.request.method, response.request.url, response.status_code)
+_http_log = logging.getLogger("automation.http")
 
 
 @pytest.fixture(autouse=True)
 def http_logging():
-    """Attach the response hook to the requests Session for every test."""
-    requests.Session.send_original = requests.Session.send
+    """Log every requests HTTP call as INFO so pytest-html captures it."""
+    original_send = requests.Session.send  # captured in closure — no class-level state
 
     def patched_send(self, request, **kwargs):
-        response = self.send_original(request, **kwargs)
-        _log_response(response)
+        response = original_send(self, request, **kwargs)
+        _http_log.info("%s %s  →  %s", request.method, request.url, response.status_code)
         return response
 
     requests.Session.send = patched_send
     yield
-    requests.Session.send = requests.Session.send_original
-    del requests.Session.send_original
+    requests.Session.send = original_send
 
 @pytest.fixture(scope="session")
 def browser():
