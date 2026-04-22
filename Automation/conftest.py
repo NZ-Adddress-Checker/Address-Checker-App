@@ -48,6 +48,9 @@ def browser():
         browser.close()
 
 
+_pw_log = logging.getLogger("automation.browser")
+
+
 @pytest.fixture(scope="function")
 def page(browser):
     # Create a completely isolated context with no storage state
@@ -60,6 +63,13 @@ def page(browser):
     # Set default timeouts for more reliable interactions
     page.set_default_timeout(30000)  # 30 seconds default timeout
     page.set_default_navigation_timeout(30000)
+
+    # Log every browser network response so pytest captures it in live log / HTML report
+    def _on_response(response):
+        _pw_log.info("%s %s  →  %s", response.request.method, response.url, response.status)
+
+    page.on("response", _on_response)
+
     yield page
     # Cleanup: ensure we're logged out before closing
     try:
