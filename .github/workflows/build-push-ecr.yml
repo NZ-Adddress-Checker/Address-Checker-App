@@ -186,22 +186,24 @@ jobs:
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8001/api/health || curl -sf http://localhost:8001/health; then
               echo "Backend is healthy"
-              break
+              exit 0
             fi
             echo "Waiting for backend... attempt $i"
             sleep 3
           done
+          echo "ERROR: Backend never became healthy" && exit 1
 
       - name: Wait for frontend to be ready
         run: |
           for i in $(seq 1 20); do
             if curl -sf http://localhost:8085 > /dev/null; then
               echo "Frontend is ready"
-              break
+              exit 0
             fi
             echo "Waiting for frontend... attempt $i"
             sleep 3
           done
+          echo "ERROR: Frontend never became ready" && exit 1
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -222,7 +224,6 @@ jobs:
             Tests/test_backend_api.py \
             Tests/test_jwt_security.py \
             Tests/test_address_api.py \
-            Tests/test_error_handling.py \
             -v --tb=short \
             --html=report-api.html \
             --self-contained-html
@@ -230,7 +231,9 @@ jobs:
 
       - name: Run Playwright UI tests
         run: |
-          python -m pytest Tests/test_ui_flow.py \
+          python -m pytest \
+            Tests/test_ui_flow.py \
+            Tests/test_error_handling.py \
             -v --tb=short \
             --html=report-ui.html \
             --self-contained-html

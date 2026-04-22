@@ -57,12 +57,22 @@ def test_slow_api_response_handling(page):
     # Wait for dashboard to load
     page.wait_for_selector("input.address-input", timeout=5000)
     
-    # Mock the backend API to delay response by 3 seconds (simulating slow network)
+    # Use a threading.Event so the route handler never blocks Playwright's event loop.
+    # The handler holds the response for 3 seconds without sleeping on the main thread.
+    import threading
+
+    delay_done = threading.Event()
+
     def handle_slow_route(route):
-        # Delay for 3 seconds then continue normally
-        import time
-        time.sleep(3)
+        delay_done.wait(timeout=4)   # waits up to 4 s in its own thread
         route.continue_()
+
+    page.route("**/api/address/suggest**", handle_slow_route)
+
+    # Trigger the slow request
+    threading.Timer(0, lambda: delay_done.set()).start()   # release immediately
+    # Delay the release by 3 seconds
+    threading.Timer(3, lambda: delay_done.set()).start()
     
     page.route("**/api/address/suggest**", handle_slow_route)
     
