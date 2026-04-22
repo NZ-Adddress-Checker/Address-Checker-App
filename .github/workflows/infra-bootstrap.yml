@@ -227,18 +227,20 @@ jobs:
       - name: Register backend task definition
         id: backend-td
         env:
-          JWT_ISSUER: ${{ secrets.JWT_ISSUER }}
-          JWT_AUDIENCE: ${{ secrets.JWT_AUDIENCE }}
-          JWKS_URL: ${{ secrets.JWKS_URL }}
+          COGNITO_REGION: ${{ secrets.COGNITO_REGION }}
+          USER_POOL_ID: ${{ secrets.USER_POOL_ID }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          NZPOST_API_KEY: ${{ secrets.NZPOST_API_KEY }}
         run: |
           jq -n \
             --arg account "${{ env.AWS_ACCOUNT_ID }}" \
             --arg region "${{ env.AWS_REGION }}" \
             --arg repo "${{ env.BACKEND_REPO }}" \
-            --arg jwt_issuer "$JWT_ISSUER" \
-            --arg jwt_audience "$JWT_AUDIENCE" \
-            --arg jwks_url "$JWKS_URL" \
-            --arg frontend_origins "http://${{ steps.alb.outputs.alb_dns }}" \
+            --arg cognito_region "$COGNITO_REGION" \
+            --arg user_pool_id "$USER_POOL_ID" \
+            --arg client_id "$CLIENT_ID" \
+            --arg nzpost_api_key "$NZPOST_API_KEY" \
+            --arg cors_origin "http://${{ steps.alb.outputs.alb_dns }}" \
             '{
               family: "address-checker-backend",
               networkMode: "awsvpc",
@@ -251,12 +253,11 @@ jobs:
                 image: "\($account).dkr.ecr.\($region).amazonaws.com/\($repo):latest",
                 portMappings: [{containerPort: 8000, protocol: "tcp"}],
                 environment: [
-                  {name: "APP_ENV",           value: "prod"},
-                  {name: "FRONTEND_ORIGINS",  value: $frontend_origins},
-                  {name: "JWT_ISSUER",        value: $jwt_issuer},
-                  {name: "JWT_AUDIENCE",      value: $jwt_audience},
-                  {name: "JWKS_URL",          value: $jwks_url},
-                  {name: "NZPOST_MOCK",       value: "true"}
+                  {name: "COGNITO_REGION", value: $cognito_region},
+                  {name: "USER_POOL_ID",   value: $user_pool_id},
+                  {name: "CLIENT_ID",      value: $client_id},
+                  {name: "NZPOST_API_KEY", value: $nzpost_api_key},
+                  {name: "CORS_ORIGIN",    value: $cors_origin}
                 ],
                 logConfiguration: {
                   logDriver: "awslogs",
@@ -366,11 +367,11 @@ jobs:
           echo "  Health:      http://${{ steps.alb.outputs.alb_dns }}:8000/health"
           echo ""
           echo "NEXT STEPS:"
-          echo "  1. Set GitHub Actions variable VITE_API_BASE_URL to:"
+          echo "  1. Set GitHub Actions secret REACT_APP_API_URL to:"
           echo "     http://${{ steps.alb.outputs.alb_dns }}:8000"
           echo "  2. Re-run the 'Build and Push to ECR' workflow so the"
           echo "     frontend image is rebuilt with the correct API URL."
-          echo "  3. Set GitHub Actions variables:"
+          echo "  3. Confirm GitHub Actions variables are set:"
           echo "     ECS_CLUSTER=${{ env.CLUSTER_NAME }}"
           echo "     ECS_BACKEND_SERVICE=${{ env.BACKEND_SERVICE }}"
           echo "     ECS_FRONTEND_SERVICE=${{ env.FRONTEND_SERVICE }}"
