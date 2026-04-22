@@ -23,8 +23,26 @@ export default function Login() {
   };
 
   return (
-    <div>
-      <button onClick={handleStart}>Start</button>
+    <div style={{
+      minHeight: "100vh",
+      backgroundImage: "url('https://flagcdn.com/w2560/nz.jpg')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }}>
+      <div style={{
+        backgroundColor: "rgba(0, 0, 0, 0.55)",
+        borderRadius: "12px",
+        padding: "48px 64px",
+        textAlign: "center",
+      }}>
+        <h1 style={{ color: "white", fontSize: "2rem", marginBottom: "28px", fontFamily: "sans-serif" }}>
+          Welcome to NZ address validator
+        </h1>
+        <button onClick={handleStart}>Start</button>
+      </div>
     </div>
   );
 }

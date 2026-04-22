@@ -12,6 +12,17 @@ logging.getLogger().setLevel(logging.INFO)
 _http_log = logging.getLogger("automation.http")
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "external: marks tests that call external APIs (deselect with '-m not external')")
+    config.addinivalue_line("markers", "contract: External API contract tests (skipped by default to preserve quota)")
+    config.addinivalue_line("markers", "functional: Functional end-to-end user flow tests")
+    config.addinivalue_line("markers", "security: Security and authentication tests")
+    config.addinivalue_line("markers", "api: Backend API endpoint tests")
+    config.addinivalue_line("markers", "error_handling: Error handling and resilience tests")
+    config.addinivalue_line("markers", "smoke: Critical smoke tests for quick validation")
+    config.addinivalue_line("markers", "slow: Tests that take longer than 10 seconds")
+
+
 @pytest.fixture(autouse=True)
 def http_logging():
     """Log every requests HTTP call as INFO so pytest-html captures it."""
