@@ -266,20 +266,62 @@ jobs:
           role-to-assume: arn:aws:iam::864144288759:role/github-actions-admin
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Force new backend deployment
+      - name: Login to Amazon ECR
+        id: login-ecr-deploy
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Update backend task definition with new image
+        id: backend-task-def
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr-deploy.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          NEW_IMAGE="$ECR_REGISTRY/${{ env.ECR_BACKEND_REPO }}:$IMAGE_TAG"
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition address-checker-backend \
+            --query 'taskDefinition' --output json)
+          NEW_TASK_DEF=$(echo "$TASK_DEF" | jq \
+            --arg img "$NEW_IMAGE" \
+            'del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy) |
+             .containerDefinitions[0].image = $img')
+          TD_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$NEW_TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "td_arn=$TD_ARN" >> $GITHUB_OUTPUT
+
+      - name: Update frontend task definition with new image
+        id: frontend-task-def
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr-deploy.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          NEW_IMAGE="$ECR_REGISTRY/${{ env.ECR_FRONTEND_REPO }}:$IMAGE_TAG"
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition address-checker-frontend \
+            --query 'taskDefinition' --output json)
+          NEW_TASK_DEF=$(echo "$TASK_DEF" | jq \
+            --arg img "$NEW_IMAGE" \
+            'del(.taskDefinitionArn,.revision,.status,.requiresAttributes,.compatibilities,.registeredAt,.registeredBy) |
+             .containerDefinitions[0].image = $img')
+          TD_ARN=$(aws ecs register-task-definition \
+            --cli-input-json "$NEW_TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "td_arn=$TD_ARN" >> $GITHUB_OUTPUT
+
+      - name: Deploy backend to ECS
         run: |
           aws ecs update-service \
             --cluster ${{ vars.ECS_CLUSTER }} \
             --service ${{ vars.ECS_BACKEND_SERVICE }} \
-            --force-new-deployment \
+            --task-definition ${{ steps.backend-task-def.outputs.td_arn }} \
             --region ${{ env.AWS_REGION }}
 
-      - name: Force new frontend deployment
+      - name: Deploy frontend to ECS
         run: |
           aws ecs update-service \
             --cluster ${{ vars.ECS_CLUSTER }} \
             --service ${{ vars.ECS_FRONTEND_SERVICE }} \
-            --force-new-deployment \
+            --task-definition ${{ steps.frontend-task-def.outputs.td_arn }} \
             --region ${{ env.AWS_REGION }}
 
       - name: Wait for backend service to stabilise
