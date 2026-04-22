@@ -159,6 +159,16 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_FRONTEND_REPO:latest
 
+      - name: Verify frontend image content
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          echo "=== Contents of /usr/share/nginx/html/ ==="
+          docker run --rm $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG ls -la /usr/share/nginx/html/
+          echo "=== index.html ==="
+          docker run --rm $ECR_REGISTRY/$ECR_FRONTEND_REPO:$IMAGE_TAG cat /usr/share/nginx/html/index.html
+
   e2e-tests:
     name: Automation E2E Tests
     runs-on: ubuntu-latest
