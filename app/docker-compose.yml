@@ -1,14 +1,12 @@
-version: "3.9"
-
 services:
   backend:
     build: ./backend
     ports:
-      - "8001:8000"
+      - "5001:5000"
     env_file:
       - .env
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/api/health', timeout=3)"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -17,7 +15,7 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "8085:80"
+      - "5002:50"
     depends_on:
       backend:
         condition: service_healthy

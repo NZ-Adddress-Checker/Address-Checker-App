@@ -73,7 +73,7 @@ def page(browser):
     yield page
     # Cleanup: ensure we're logged out before closing
     try:
-        page.goto("http://localhost:8085", timeout=2000, wait_until="domcontentloaded")
+        page.goto("http://localhost:5002", timeout=2000, wait_until="domcontentloaded")
         page.evaluate("() => { localStorage.clear(); sessionStorage.clear(); }")
     except:
         pass  # Ignore cleanup errors

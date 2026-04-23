@@ -1,7 +1,7 @@
 import os
 
-BASE_URL = "http://localhost:8085"
-API_URL = "http://localhost:8001/api"
+BASE_URL = "http://localhost:5002"
+API_URL = "http://localhost:5001/api"
 
 USERS = {
     "valid": {

@@ -9,13 +9,13 @@ const config = {
       process.env.REACT_APP_COGNITO_DOMAIN ||
       "https://ap-southeast-22oqqdaka4.auth.ap-southeast-2.amazoncognito.com",
     redirectUri:
-      process.env.REACT_APP_REDIRECT_URI || "http://localhost:8085/callback",
+      process.env.REACT_APP_REDIRECT_URI || "http://localhost:5002/callback",
     logoutUri:
-      process.env.REACT_APP_LOGOUT_URI || "http://localhost:8085/",
+      process.env.REACT_APP_LOGOUT_URI || "http://localhost:5002/",
     scope: "email openid phone",
   },
   api: {
-    baseURL: process.env.REACT_APP_API_URL || "http://localhost:8001/api",
+    baseURL: process.env.REACT_APP_API_URL || "http://localhost:5001/api",
   },
 };
 

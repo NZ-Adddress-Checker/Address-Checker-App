@@ -79,8 +79,8 @@ jobs:
             ALB_SG=${{ steps.alb-sg.outputs.sg_id }}
             aws ec2 authorize-security-group-ingress --group-id $SG \
               --ip-permissions "[
-                {\"IpProtocol\":\"tcp\",\"FromPort\":80,\"ToPort\":80,\"UserIdGroupPairs\":[{\"GroupId\":\"$ALB_SG\"}]},
-                {\"IpProtocol\":\"tcp\",\"FromPort\":8000,\"ToPort\":8000,\"UserIdGroupPairs\":[{\"GroupId\":\"$ALB_SG\"}]}
+                {\"IpProtocol\":\"tcp\",\"FromPort\":50,\"ToPort\":50,\"UserIdGroupPairs\":[{\"GroupId\":\"$ALB_SG\"}]},
+                {\"IpProtocol\":\"tcp\",\"FromPort\":5000,\"ToPort\":5000,\"UserIdGroupPairs\":[{\"GroupId\":\"$ALB_SG\"}]}
               ]"
             echo "Created ECS SG: $SG"
           else
@@ -161,15 +161,22 @@ jobs:
             --names address-checker-backend-tg \
             --query "TargetGroups[0].TargetGroupArn" --output text 2>/dev/null || echo "")
           if [ -n "$EXISTING" ] && [ "$EXISTING" != "None" ]; then
+            aws elbv2 modify-target-group \
+              --target-group-arn "$EXISTING" \
+              --port 5000 \
+              --health-check-path /api/health \
+              --health-check-interval-seconds 30 \
+              --healthy-threshold-count 2 \
+              --unhealthy-threshold-count 3
             echo "tg_arn=$EXISTING" >> $GITHUB_OUTPUT
           else
             TG=$(aws elbv2 create-target-group \
               --name address-checker-backend-tg \
               --protocol HTTP \
-              --port 8000 \
+              --port 5000 \
               --vpc-id ${{ steps.network.outputs.vpc_id }} \
               --target-type ip \
-              --health-check-path /health \
+              --health-check-path /api/health \
               --health-check-interval-seconds 30 \
               --healthy-threshold-count 2 \
               --unhealthy-threshold-count 3 \
@@ -184,12 +191,19 @@ jobs:
             --names address-checker-frontend-tg \
             --query "TargetGroups[0].TargetGroupArn" --output text 2>/dev/null || echo "")
           if [ -n "$EXISTING" ] && [ "$EXISTING" != "None" ]; then
+            aws elbv2 modify-target-group \
+              --target-group-arn "$EXISTING" \
+              --port 50 \
+              --health-check-path / \
+              --health-check-interval-seconds 30 \
+              --healthy-threshold-count 2 \
+              --unhealthy-threshold-count 3
             echo "tg_arn=$EXISTING" >> $GITHUB_OUTPUT
           else
             TG=$(aws elbv2 create-target-group \
               --name address-checker-frontend-tg \
               --protocol HTTP \
-              --port 80 \
+              --port 50 \
               --vpc-id ${{ steps.network.outputs.vpc_id }} \
               --target-type ip \
               --health-check-path / \
@@ -249,7 +263,7 @@ jobs:
               containerDefinitions: [{
                 name: "backend",
                 image: "\($account).dkr.ecr.\($region).amazonaws.com/\($repo):latest",
-                portMappings: [{containerPort: 8000, protocol: "tcp"}],
+                portMappings: [{containerPort: 5000, protocol: "tcp"}],
                 environment: [
                   {name: "COGNITO_REGION", value: $cognito_region},
                   {name: "USER_POOL_ID",   value: $user_pool_id},
@@ -288,7 +302,7 @@ jobs:
               containerDefinitions: [{
                 name: "frontend",
                 image: "\($account).dkr.ecr.\($region).amazonaws.com/\($repo):latest",
-                portMappings: [{containerPort: 80, protocol: "tcp"}],
+                portMappings: [{containerPort: 50, protocol: "tcp"}],
                 logConfiguration: {
                   logDriver: "awslogs",
                   options: {
@@ -326,7 +340,7 @@ jobs:
               --desired-count 1 \
               --launch-type FARGATE \
               --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=ENABLED}" \
-              --load-balancers "targetGroupArn=${{ steps.backend-tg.outputs.tg_arn }},containerName=backend,containerPort=8000"
+                --load-balancers "targetGroupArn=${{ steps.backend-tg.outputs.tg_arn }},containerName=backend,containerPort=5000"
           fi
 
       - name: Create or update frontend ECS service
@@ -351,7 +365,7 @@ jobs:
               --desired-count 1 \
               --launch-type FARGATE \
               --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=ENABLED}" \
-              --load-balancers "targetGroupArn=${{ steps.frontend-tg.outputs.tg_arn }},containerName=frontend,containerPort=80"
+                --load-balancers "targetGroupArn=${{ steps.frontend-tg.outputs.tg_arn }},containerName=frontend,containerPort=50"
           fi
 
       - name: Output application URLs
@@ -360,12 +374,12 @@ jobs:
           echo "Infrastructure provisioned successfully!"
           echo ""
           echo "  Frontend:    http://${{ steps.alb.outputs.alb_dns }}"
-          echo "  Backend API: http://${{ steps.alb.outputs.alb_dns }}:8000"
-          echo "  Health:      http://${{ steps.alb.outputs.alb_dns }}:8000/health"
+          echo "  Backend API: http://${{ steps.alb.outputs.alb_dns }}:8000/api"
+          echo "  Health:      http://${{ steps.alb.outputs.alb_dns }}:8000/api/health"
           echo ""
           echo "NEXT STEPS:"
           echo "  1. Set GitHub Actions secret REACT_APP_API_URL to:"
-          echo "     http://${{ steps.alb.outputs.alb_dns }}:8000"
+          echo "     http://${{ steps.alb.outputs.alb_dns }}:8000/api"
           echo "  2. Re-run the 'Build and Push to ECR' workflow so the"
           echo "     frontend image is rebuilt with the correct API URL."
           echo "  3. Confirm GitHub Actions variables are set:"

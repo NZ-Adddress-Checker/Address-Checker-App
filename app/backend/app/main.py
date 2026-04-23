@@ -17,5 +17,6 @@ app.include_router(address.router, prefix="/api/address")
 
 
 @app.get("/health")
+@app.get("/api/health")
 def health():
     return {"status": "ok"}

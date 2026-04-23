@@ -136,8 +136,8 @@ cd "C:\Users\jeffr\OneDrive\Desktop\NZ add checker\address-checker-app"
 docker-compose up -d
 
 # Check health
-Invoke-WebRequest -Uri "http://localhost:8085" -TimeoutSec 3
-Invoke-WebRequest -Uri "http://localhost:8001/api/health" -TimeoutSec 3
+Invoke-WebRequest -Uri "http://localhost:5002" -TimeoutSec 3
+Invoke-WebRequest -Uri "http://localhost:5001/api/health" -TimeoutSec 3
 ```
 
 ### Problem: Tests are slow
@@ -312,8 +312,8 @@ pytest Tests/test_my_feature.py::test_my_feature -v
 
 After setup, verify:
 - [ ] Docker containers running (`docker ps`)
-- [ ] Frontend accessible (http://localhost:8085)
-- [ ] Backend accessible (http://localhost:8001/api/health)
+- [ ] Frontend accessible (http://localhost:5002)
+- [ ] Backend accessible (http://localhost:5001/api/health)
 - [ ] Python packages installed (`pip list | findstr playwright`)
 - [ ] Playwright browser installed (`python -m playwright --version`)
 - [ ] Smoke test passes (`pytest Tests/test_ui_flow.py::test_valid_user_flow -v`)

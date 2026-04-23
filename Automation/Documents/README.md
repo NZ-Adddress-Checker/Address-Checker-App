@@ -103,8 +103,8 @@ nz-address-checker-automation/
 ## ⚙️ Configuration
 
 Edit `config.py` to customize:
-- Base URL (default: `http://localhost:8085`)
-- API URL (default: `http://localhost:8001/api`)
+- Base URL (default: `http://localhost:5002`)
+- API URL (default: `http://localhost:5001/api`)
 - Test user credentials
 - API keys
 - Browser settings (headless, slow-mo)
@@ -112,8 +112,8 @@ Edit `config.py` to customize:
 ## 🔧 Environment Setup
 
 ### Application Stack
-1. **Frontend**: React app on port 8085
-2. **Backend**: FastAPI on port 8001
+1. **Frontend**: React app on port 5002
+2. **Backend**: FastAPI on port 5001
 3. **Authentication**: AWS Cognito
 
 ### Starting the Application
@@ -127,10 +127,10 @@ docker-compose up -d
 
 ```powershell
 # Check frontend
-Invoke-WebRequest -Uri "http://localhost:8085" -TimeoutSec 3
+Invoke-WebRequest -Uri "http://localhost:5002" -TimeoutSec 3
 
 # Check backend
-Invoke-WebRequest -Uri "http://localhost:8001/api/health" -TimeoutSec 3
+Invoke-WebRequest -Uri "http://localhost:5001/api/health" -TimeoutSec 3
 ```
 
 ## 📝 Test Data
@@ -199,6 +199,7 @@ pytest -m external -v
 - [Test Strategy](TEST_STRATEGY.md) - Testing objectives, approach, and methodology
 - [Test Cases](TEST_CASES.md) - Detailed test case specifications with step-by-step execution
 - [Impact Analysis](IMPACT_ANALYSIS.md) - Change impact assessment and deployment risk analysis
+- [AWS Deployment Guide](AWS_DEPLOYMENT.md) - ECR and ECS Fargate deployment setup
 - [Architecture Guide](ARCHITECTURE.md) - Framework design and technical architecture
 - [Troubleshooting Guide](TROUBLESHOOTING.md) - Debugging and problem resolution
 - [Quick Start Guide](QUICK_START.md) - 5-minute setup and common commands

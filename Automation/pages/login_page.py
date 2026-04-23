@@ -15,7 +15,7 @@ class LoginPage(BasePage):
         """Login via Cognito's hosted UI.
         Clicking Start triggers a two-hop redirect:
           1. window.location → Cognito logout URL
-          2. Cognito redirects back to logoutUri (localhost:8085/)
+          2. Cognito redirects back to logoutUri (localhost:5002/)
           3. useEffect sees autostart=1, calls signinRedirect → Cognito login page
         """
         self.page.wait_for_load_state("networkidle", timeout=15000)

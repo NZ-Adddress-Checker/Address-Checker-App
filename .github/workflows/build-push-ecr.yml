@@ -184,7 +184,7 @@ jobs:
             'COGNITO_REGION=ap-southeast-2' \
             'USER_POOL_ID=ap-southeast-2_2oQQDAKa4' \
             'CLIENT_ID=4p7i1nq2t426jufkh0pe7fgo2u' \
-            'CORS_ORIGIN=http://localhost:8085' \
+            'CORS_ORIGIN=http://localhost:5002' \
             > ${{ env.APP_DIR }}/.env
 
       - name: Start app with Docker Compose
@@ -193,7 +193,7 @@ jobs:
       - name: Wait for backend to be healthy
         run: |
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:8001/api/health || curl -sf http://localhost:8001/health; then
+            if curl -sf http://localhost:5001/api/health || curl -sf http://localhost:5001/health; then
               echo "Backend is healthy"
               exit 0
             fi
@@ -205,7 +205,7 @@ jobs:
       - name: Wait for frontend to be ready
         run: |
           for i in $(seq 1 20); do
-            if curl -sf http://localhost:8085 > /dev/null; then
+            if curl -sf http://localhost:5002 > /dev/null; then
               echo "Frontend is ready"
               exit 0
             fi
