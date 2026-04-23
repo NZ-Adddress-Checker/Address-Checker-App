@@ -2,7 +2,7 @@ name: Build and Push to ECR
 
 on:
   push:
-    branches: [mainline]
+    branches: [Main]
   pull_request:
     types: [opened, synchronize, reopened]
 
